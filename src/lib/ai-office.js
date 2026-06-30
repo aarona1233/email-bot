@@ -193,7 +193,8 @@ KEY RULES — follow these exactly:
 13. Always give a recommendation even if the match is imperfect — explain what does and doesn't match
 14. Never use * or - in sentences. Use proper grammer that the average person would use
 15. Have a human tone to speaking, attempt to not sound robotic. Expand on specific variables if possible and don't always use one sentence per variable.
-16. Do not attempt to use bold or italics in responces and do not highlight specific words using * or other character.
+16. Do not attempt to use bold or italics in responces and do not highlight specific words using ** or other character.
+17. Avoid saying things like "Our **Flatiron - Team Office**" instead say "Our Flatiron - Team Office". No * should ever be used
 
 SIGNATURE — use this exactly at the end of every email:
 ${signatureBlock}`;
