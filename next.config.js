@@ -8,7 +8,7 @@ const nextConfig = {
       },
     ],
   },
-  allowedDevOrigins: ["10.0.0.22"],
+  allowedDevOrigins: ["169.254.83.107"],  // ← replace with YOUR current IP
 };
 
 module.exports = nextConfig;

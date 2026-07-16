@@ -1,6 +1,14 @@
 // src/lib/ai-office.js
 // ─────────────────────────────────────────────────────────
+// Prompt builder for Coalition Space email replies.
+// Supports custom signatures per user.
+// Trained on real example replies from Coalition Space.
+// ─────────────────────────────────────────────────────────
 
+// ── Real example replies ──────────────────────────────────
+// These train the AI on tone and response strategy.
+// Replace names/signatures in examples with placeholders
+// so the AI uses the custom signature instead.
 const EXAMPLE_REPLIES = [
   {
     situation: "Client needs 2-person private office at 485 Madison Ave, monthly, wants photos and tour",
@@ -14,19 +22,6 @@ The monthly pricing at this location is $2,000, and all of our private offices a
 We'd love to have you by for a tour! What time this week or next week works best for you?
 
 Here are some attached photos of this office location:
-
-[YOUR SIGNATURE]`,
-  },
-  {
-    situation: "Solo operator looking for private office at Tower 45, monthly, wants photos and pricing",
-    inquiry: "Hey, I saw your listing for Tower 45 at 45 West 45th Street. I'm a solo operator looking for a private office there on a monthly basis. What's pricing like and can you send some photos? Thanks, Sarah",
-    reply: `Hi Sarah!
-
-Thank you for reaching out to us about our Tower 45 private office at 45 West 45th Street. I think we have exactly what you're looking for yourself! Monthly pricing for this location is $2,200, and it includes a fully furnished work space, high-speed internet, conference rooms, security, reception, mail, and package handling.
-
-Here are the attachment photos for this office location!
-
-Looking forward to hearing from you,
 
 [YOUR SIGNATURE]`,
   },
@@ -53,30 +48,117 @@ Thank you!
 [YOUR SIGNATURE]`,
   },
   {
-    situation: "Client toured already, 4-person team, needs full pricing breakdown, terms, and move-in details",
-    inquiry: "4-person office inquiry, monthly pricing, standard amenities, already visited the space",
-    reply: `Hi Evan, was great meeting you earlier! Wanted to share a few more details, pricing, + next steps here.
+    situation: "Real Coalition Space inquiry — RE: 462-468 Seventh Ave",
+    inquiry: `Hi Asia,
 
-We have Month-To-Month, 3-Month, 6-Month, and 12-Month terms available. For a minimum term without incurring the 10% fee, we recommend doing 3 Months minimum and if you do decide for 12-Month term, we are running the additional free month promo.
+This is what the are looking for: 
 
-For move-in, we require:
-* First month's rent
-* Security deposit (same as one month)
-* Keycards fee
-* COI (if you're using a moving company)
+*  Budget: $4,000-$5,000 per month
 
-Keycards (Premium Portal Access Fees) are charged by the building and are $8.95/mo/per person on your team and replacement keycards are $75 each.
+*  Space type: A carve-out within a shared office (with a co-tenant)
 
-Your team will have 24/7/365 access to the building and there's always security here, including on holidays. Utilities, housekeeping, furniture, and WiFi are all included within your rent. We also offer Ethernet ($50/mo each) and Landline Phones ($75/mo each) if you'd like additional tech features.
+ 
 
-Feel free to reach out if you have any questions or if you'd be interested in test driving the space first, let us know!
+Layout needs:
+
+*	A couple of private offices
+
+*	A few cubicles
+*	Access to shared kitchen, break room, and conference rooms
+
+	 
+
+Do you have anything for them? 
+
+ 
+
+Best, 
+
+Cesar`,
+    reply: `Hi Cesar! We have three brand new floors, fully-furnished and ready for immediate move-in that match your requirements. Attaching some photos of the space here, but looks amazing IRL. Are you available to meet my director, Tom, and see space this week?
+
+ 
+
+Thank you!
 
 [YOUR SIGNATURE]`,
   },
   {
-    situation: "Urgent compliance request, wants a call, New Jersey, FINRA, 6 people",
-    inquiry: "Office space in New Jersey urgent, 6 people, FINRA broker dealer requirements, arrange a call today or tomorrow",
-    reply: `Hi Thomas, great speaking with you! Are you free to jump on a Zoom call today at 1pm to discuss your requirements?
+    situation: "Real Coalition Space inquiry — RE: 462-468 Seventh Ave, 6th Floor, New York, NY 10018, Unit",
+    inquiry: `Hey Asia just following up on the price and square footage of this space?
+
+ 
+
+All the best,
+
+Graham
+
+ 
+
+ 
+
+  
+
+Graham Janovic`,
+    reply: `Hi Graham! It's roughly around 6,000 SF, beautiful open space. My director, Tom, will give you a call to share more details!
+
+[YOUR SIGNATURE]`,
+  },
+  {
+    situation: "Real Coalition Space inquiry — RE: 462-468 Seventh Ave, 6th Floor, New York, NY 10018, Unit",
+    inquiry: `I just need to know pricing?
+
+ 
+
+ 
+
+  
+
+Graham Janovic`,
+    reply: `Hi Graham! It's $39,000/mo. Let us know if you need further details or if you'd like to meet, we're flexible!
+
+[YOUR SIGNATURE]`,
+  },
+  {
+    situation: "Real Coalition Space inquiry — RE: 462-468 Seventh Ave, 6th Floor, New York, NY 10018, Unit",
+    inquiry: `How many offices/conference rooms/ phone booths/ desks does this unit have?
+
+ 
+
+ 
+
+  
+
+Graham Janovic`,
+    reply: `Hi Graham! This is an enterprise space, but on the other floors, there's 47 offices, 3 conference rooms, 3 phone booths, and several hot desk and nook areas available. I'll also include those options in the 4th floorplan here and some photos.
+
+[YOUR SIGNATURE]`,
+  },
+  {
+    situation: "Real Coalition Space inquiry — RE: 485 Madison Ave, 7th Floor, New York, NY 10022, United S",
+    inquiry: `Good Morning Asia,
+
+Can you share what you have for 5-8 people who need 1-2 offices and bullpen of sorts?
+
+photos?
+asking?
+
+Thanks,
+
+Marcus Craddock
+Senior Advisor
+Cresa
+1133 Avenue of the Americas, Suite 2900
+New York, NY 10036
+United States`,
+    reply: `Hi Marcus! Absolutely, highlighting options here and confirming flexibility to tour anytime this week or next ðŸ˜Š
+
+[YOUR SIGNATURE]`,
+  },
+  {
+    situation: "Real Coalition Space inquiry — RE: Adam | 462 Seventh Ave, NY",
+    inquiry: `i am open, but have a budget of 2500 per month....so please keep that in mind.`,
+    reply: `Hi Adam, got it! We're attaching options here for both 462 Seventh Avenue and Tower 45. We'll write a note to check in early September if you'd like to stop by and see the spaces in-person. In the meanwhile, you're welcome to reach out here anytime ðŸ˜Š
 
 [YOUR SIGNATURE]`,
   },
@@ -181,7 +263,7 @@ KEY RULES — follow these exactly:
 1. Always open with "Hi [FirstName]," — extract the first name from the email signature or sender name
 2. If the client is missing key info (budget, start date, team size), ask for it briefly like Example 1 — don't dump all options on them
 3. If the client gave enough info, share the BEST MATCH spaces and pricing directly
-4. Mention ALTERNATIVE spaces briefly at the end as other options — even if imperfect, say "We also have X which might work depending on your needs"
+4. Always mention ALTERNATIVE spaces briefly at the end as other options — even if imperfect, say "We also have X which might work depending on your needs"
 5. If the client wants a call or Zoom, offer one immediately — keep it very short like Example 3
 6. If compliance requirements are mentioned (FINRA, broker dealer, etc.), acknowledge them and confirm you have segregated private spaces that can meet those needs
 7. If a client wants a tour, confirm availability and ask for preferred time if not given
@@ -191,10 +273,6 @@ KEY RULES — follow these exactly:
 11. IMAGE RULE — this is critical: scan the space data above for any lines that start with "Image:" and contain a real URL (not the word "none"). If you find real Image URLs, copy them EXACTLY as written and add one line per image before the signature: [ATTACH IMAGE: <exact_url>]. If ALL Image lines say "Image: none" or no Image lines exist, do NOT include any [ATTACH IMAGE] lines whatsoever. Do NOT invent URLs. Do NOT guess URLs. Do NOT construct URLs from property names or addresses. Only real URLs copied verbatim from the data.
 12. Never make up availability, pricing, or space details — only use what is in the database
 13. Always give a recommendation even if the match is imperfect — explain what does and doesn't match
-14. Never use * or - in sentences. Use proper grammer that the average person would use
-15. Have a human tone to speaking, attempt to not sound robotic. Expand on specific variables if possible and don't always use one sentence per variable.
-16. Do not attempt to use bold or italics in responces and do not highlight specific words using ** or other character.
-17. Avoid saying things like "Our **Flatiron - Team Office**" instead say "Our Flatiron - Team Office". No * should ever be used
 
 SIGNATURE — use this exactly at the end of every email:
 ${signatureBlock}`;
