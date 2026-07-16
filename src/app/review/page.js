@@ -280,9 +280,19 @@ export default function OfficeReviewPage() {
 
         {error && <p style={styles.error}>{error}</p>}
 
-        <p style={{ fontSize: "13px", color: "#666", marginBottom: "12px" }}>
-          Sending to: <strong>{address}</strong>
-        </p>
+        <section style={styles.section}>
+          <label style={styles.label}>📧 Send To (editable)</label>
+          <input
+            type="email"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            style={styles.input}
+            placeholder="recipient@example.com"
+          />
+          <p style={{ fontSize: "11px", color: "#94a3b8", marginTop: "4px" }}>
+            Change this to redirect the email (e.g. to your own address during testing).
+          </p>
+        </section>
 
         <button
           onClick={handleSend}

@@ -1,0 +1,20 @@
+# ── Add these lines to your .env.local for IMAP ──────────
+
+# IMAP mailbox connection (for fetching real incoming emails)
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+IMAP_USER=inbox@yourdomain.com
+IMAP_PASSWORD=your_app_password_here
+
+# ── Gmail note ───────────────────────────────────────────
+# Gmail blocks regular passwords over IMAP. You must:
+#   1. Enable 2-Factor Auth on the Google account
+#   2. Go to Google Account → Security → App Passwords
+#   3. Generate an App Password for "Mail"
+#   4. Use that 16-character password as IMAP_PASSWORD
+#
+# Other providers:
+#   Outlook/Office365:  outlook.office365.com  port 993
+#   Yahoo:              imap.mail.yahoo.com    port 993
+#   iCloud:             imap.mail.me.com       port 993
+#   Custom domain:      ask your email host for IMAP settings
