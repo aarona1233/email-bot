@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Sidebar from "@/components/Sidebar";
 
 const REJECT_REASONS = [
   "Spam / promotional",
@@ -47,6 +48,7 @@ export default function InboxPage() {
 
   // ── DEBUG: on-screen log so we can see failures over IP ──
   const [debugLog, setDebugLog] = useState([]);
+  const [showDebug, setShowDebug] = useState(false);   // debug panel hidden by default
   const log = useCallback((msg) => {
     const line = `${new Date().toLocaleTimeString()} — ${msg}`;
     console.log("[INBOX DEBUG]", line);
@@ -186,10 +188,29 @@ export default function InboxPage() {
   }
 
   return (
-    <main style={styles.page}>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+      <Sidebar active="inbox" />
+      <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
       <div style={styles.container}>
 
-        {/* ── DEBUG PANEL — remove once fixed ─────────────── */}
+        {/* ── DEBUG PANEL — toggleable, hidden by default ──── */}
+        <button
+          onClick={() => setShowDebug((v) => !v)}
+          style={{
+            background: "none",
+            border: "1px solid rgba(255,255,255,0.15)",
+            color: "#7dd3fc",
+            fontSize: "11px",
+            padding: "4px 10px",
+            borderRadius: "6px",
+            cursor: "pointer",
+            marginBottom: "10px",
+          }}
+        >
+          🐛 {showDebug ? "Hide" : "Show"} debug panel
+        </button>
+
+        {showDebug && (
         <div style={{
           background: "#0b1929",
           border: "1px solid #1e3a5f",
@@ -227,6 +248,7 @@ export default function InboxPage() {
             🔄 Retry fetch
           </button>
         </div>
+        )}
 
         {/* Header */}
         <div style={styles.header}>
@@ -236,7 +258,7 @@ export default function InboxPage() {
               Review incoming inquiries. Every decision trains the future screening AI.
             </p>
           </div>
-          <button onClick={() => router.push("/")} style={styles.secondaryBtn}>
+          <button onClick={() => router.push("/manual")} style={styles.secondaryBtn}>
             Manual Reply →
           </button>
         </div>
@@ -447,7 +469,8 @@ export default function InboxPage() {
           </div>
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
 

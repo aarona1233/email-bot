@@ -10,6 +10,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Sidebar from "@/components/Sidebar";
+
+const REJECT_REASONS = [
+  "Spam / promotional",
+  "Not about office space",
+  "Vendor or sales pitch",
+  "Job application",
+  "Automated / no-reply",
+  "Other",
+];
 
 export default function BatchPage() {
   const router = useRouter();
@@ -24,6 +34,8 @@ export default function BatchPage() {
   const [error,     setError]     = useState("");
   const [notice,    setNotice]    = useState("");
   const [expanded,  setExpanded]  = useState(null);   // email opened in modal
+  const [rejecting, setRejecting] = useState(null);   // email being rejected (shows reason picker)
+  const [rejectReason, setRejectReason] = useState(REJECT_REASONS[0]);
   const [editingDraft, setEditingDraft] = useState(null); // draft opened for editing
   const [testMode,  setTestMode]  = useState(false);      // redirect all to test address
   const [testEmail, setTestEmail] = useState("");         // the test redirect address
@@ -71,6 +83,37 @@ export default function BatchPage() {
       setError(err.message);
     } finally {
       setFetching(false);
+    }
+  }
+
+  // ── Reject a single pending email ──────────────────────
+  async function handleReject(email) {
+    setError("");
+    try {
+      const res = await fetch("/api/inbox/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: email.id,
+          isValid: false,
+          rejectReason,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Reject failed");
+      }
+      setRejecting(null);
+      setExpanded(null);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(email.id);
+        return next;
+      });
+      await loadPending();
+      setNotice(`Rejected: ${email.subject}`);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -196,7 +239,9 @@ export default function BatchPage() {
   }
 
   return (
-    <main style={styles.page}>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+      <Sidebar active="batch" />
+      <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
       <div style={styles.container}>
 
         {/* Header */}
@@ -292,16 +337,29 @@ export default function BatchPage() {
                   <span style={styles.rowPreview}>
                     {email.body.slice(0, 120)}…
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setExpanded(email);
-                    }}
-                    style={styles.expandBtn}
-                  >
-                    Read full email →
-                  </button>
+                  <div style={styles.rowBtnGroup}>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setExpanded(email);
+                      }}
+                      style={styles.expandBtn}
+                    >
+                      Read full email →
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setRejecting(email);
+                        setRejectReason(REJECT_REASONS[0]);
+                      }}
+                      style={styles.rejectLinkBtn}
+                    >
+                      ✕ Reject
+                    </button>
+                  </div>
                 </div>
               </label>
             ))}
@@ -467,21 +525,51 @@ export default function BatchPage() {
                 </>
               )}
 
-            <div style={styles.modalActions}>
-              <button
-                onClick={() => {
-                  toggle(expanded.id);
-                  setExpanded(null);
-                }}
-                style={styles.modalSelectBtn}
-              >
-                {selected.has(expanded.id) ? "✓ Selected — click to deselect" : "Select for batch"}
-              </button>
-            </div>
+            {rejecting?.id === expanded.id ? (
+              <>
+                <p style={styles.modalLabel}>Why is this not a valid inquiry?</p>
+                <select
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  style={styles.select}
+                >
+                  {REJECT_REASONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <div style={styles.modalActions}>
+                  <button onClick={() => setRejecting(null)} style={styles.secondaryBtn}>
+                    Back
+                  </button>
+                  <button onClick={() => handleReject(expanded)} style={styles.rejectBtn}>
+                    Confirm Reject
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={styles.modalActions}>
+                <button
+                  onClick={() => { setRejecting(expanded); setRejectReason(REJECT_REASONS[0]); }}
+                  style={styles.rejectBtn}
+                >
+                  ✕ Reject
+                </button>
+                <button
+                  onClick={() => {
+                    toggle(expanded.id);
+                    setExpanded(null);
+                  }}
+                  style={styles.modalSelectBtn}
+                >
+                  {selected.has(expanded.id) ? "✓ Selected — click to deselect" : "Select for batch"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
 
@@ -660,6 +748,39 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     padding: 0,
+  },
+  rowBtnGroup: {
+    display: "flex",
+    gap: "14px",
+    marginTop: "4px",
+  },
+  rejectLinkBtn: {
+    background: "none",
+    border: "none",
+    color: "#dc2626",
+    fontSize: "12px",
+    fontWeight: "600",
+    cursor: "pointer",
+    padding: 0,
+  },
+  select: {
+    width: "100%",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    fontSize: "14px",
+    boxSizing: "border-box",
+    marginBottom: "4px",
+  },
+  rejectBtn: {
+    padding: "12px 20px",
+    background: "#fef2f2",
+    color: "#dc2626",
+    border: "1px solid #fecaca",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
   },
   overlay: {
     position: "fixed",
