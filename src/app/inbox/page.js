@@ -48,7 +48,7 @@ export default function InboxPage() {
 
   // ── DEBUG: on-screen log so we can see failures over IP ──
   const [debugLog, setDebugLog] = useState([]);
-  const [showDebug, setShowDebug] = useState(false);   // debug panel hidden by default
+  const [showDebug, setShowDebug] = useState(false);
   const log = useCallback((msg) => {
     const line = `${new Date().toLocaleTimeString()} — ${msg}`;
     console.log("[INBOX DEBUG]", line);
@@ -193,13 +193,12 @@ export default function InboxPage() {
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
       <div style={styles.container}>
 
-        {/* ── DEBUG PANEL — toggleable, hidden by default ──── */}
         <button
           onClick={() => setShowDebug((v) => !v)}
           style={{
-            background: "none",
-            border: "1px solid rgba(255,255,255,0.15)",
-            color: "#7dd3fc",
+            background: "transparent",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "#8b9198",
             fontSize: "11px",
             padding: "4px 10px",
             borderRadius: "6px",
@@ -207,53 +206,53 @@ export default function InboxPage() {
             marginBottom: "10px",
           }}
         >
-          🐛 {showDebug ? "Hide" : "Show"} debug panel
+          {showDebug ? "Hide" : "Show"} debug panel
         </button>
 
         {showDebug && (
-        <div style={{
-          background: "#0b1929",
-          border: "1px solid #1e3a5f",
-          borderRadius: "10px",
-          padding: "14px 16px",
-          marginBottom: "20px",
-          fontFamily: "monospace",
-          fontSize: "12px",
-          color: "#7dd3fc",
-          maxHeight: "220px",
-          overflowY: "auto",
-        }}>
-          <div style={{ color: "#fbbf24", fontWeight: "bold", marginBottom: "8px" }}>
-            🐛 DEBUG PANEL — loading: {String(loading)} | emails: {emails.length} | error: {error || "none"}
+          <div style={{
+            background: "#16191c",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "10px",
+            padding: "14px 16px",
+            marginBottom: "20px",
+            fontFamily: "monospace",
+            fontSize: "12px",
+            color: "#9aa0a6",
+            maxHeight: "220px",
+            overflowY: "auto",
+          }}>
+            <div style={{ color: "#34d399", fontWeight: "bold", marginBottom: "8px" }}>
+              DEBUG — loading: {String(loading)} | emails: {emails.length} | error: {error || "none"}
+            </div>
+            {debugLog.length === 0
+              ? <div style={{ color: "#5a6067" }}>Waiting for first fetch…</div>
+              : debugLog.map((line, i) => (
+                  <div key={i} style={{ marginBottom: "2px" }}>{line}</div>
+                ))
+            }
+            <button
+              onClick={loadEmails}
+              style={{
+                marginTop: "10px",
+                padding: "6px 12px",
+                background: "#1c1f22",
+                color: "#e8eaed",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "12px",
+              }}
+            >
+              Retry fetch
+            </button>
           </div>
-          {debugLog.length === 0
-            ? <div style={{ color: "#64748b" }}>Waiting for first fetch…</div>
-            : debugLog.map((line, i) => (
-                <div key={i} style={{ marginBottom: "2px" }}>{line}</div>
-              ))
-          }
-          <button
-            onClick={loadEmails}
-            style={{
-              marginTop: "10px",
-              padding: "6px 12px",
-              background: "#1e3a5f",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "12px",
-            }}
-          >
-            🔄 Retry fetch
-          </button>
-        </div>
         )}
 
         {/* Header */}
         <div style={styles.header}>
           <div>
-            <h1 style={styles.title}>📥 Inbox Triage</h1>
+            <h1 style={styles.title}>Inbox Triage</h1>
             <p style={styles.subtitle}>
               Review incoming inquiries. Every decision trains the future screening AI.
             </p>
@@ -312,7 +311,7 @@ export default function InboxPage() {
           <p style={styles.muted}>Loading…</p>
         ) : emails.length === 0 ? (
           <div style={styles.empty}>
-            <p style={styles.emptyIcon}>📭</p>
+            <p style={styles.emptyIcon}></p>
             <p style={styles.muted}>No {tab} emails.</p>
           </div>
         ) : (
@@ -341,8 +340,8 @@ export default function InboxPage() {
 
                 <p style={styles.cardSubject}>{email.subject}</p>
                 <p style={styles.cardPreview}>
-                  {email.body.slice(0, 140)}
-                  {email.body.length > 140 ? "…" : ""}
+                  {(email.body || "").slice(0, 140)}
+                  {(email.body || "").length > 140 ? "…" : ""}
                 </p>
 
                 <div style={styles.cardFoot}>
@@ -477,7 +476,7 @@ export default function InboxPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #1e3a5f 0%, #0f2027 100%)",
+    background: "#0b0d0f",
     padding: "32px 24px",
     fontFamily: "'Segoe UI', sans-serif",
   },
@@ -489,13 +488,13 @@ const styles = {
     marginBottom: "24px",
   },
   title:    { fontSize: "26px", fontWeight: "700", color: "#fff", margin: "0 0 4px 0" },
-  subtitle: { fontSize: "14px", color: "#a8c0d8", margin: 0 },
+  subtitle: { fontSize: "14px", color: "#9aa0a6", margin: 0 },
 
   statsBar: {
     display: "flex",
     gap: "28px",
     alignItems: "center",
-    background: "rgba(255,255,255,0.06)",
+    background: "rgba(255,255,255,0.04)",
     border: "1px solid rgba(255,255,255,0.12)",
     borderRadius: "12px",
     padding: "16px 20px",
@@ -504,7 +503,7 @@ const styles = {
   },
   stat:      { display: "flex", flexDirection: "column" },
   statValue: { fontSize: "20px", fontWeight: "700", color: "#fff" },
-  statLabel: { fontSize: "11px", color: "#a8c0d8", marginTop: "2px" },
+  statLabel: { fontSize: "11px", color: "#9aa0a6", marginTop: "2px" },
   exportBtn: {
     marginLeft: "auto",
     fontSize: "13px",
@@ -522,7 +521,7 @@ const styles = {
     borderRadius: "8px",
     border: "1px solid rgba(255,255,255,0.15)",
     background: "transparent",
-    color: "#a8c0d8",
+    color: "#9aa0a6",
     fontSize: "13px",
     fontWeight: "600",
     cursor: "pointer",
@@ -642,12 +641,12 @@ const styles = {
   approveBtn: {
     flex: 2,
     padding: "13px",
-    background: "#16a34a",
-    color: "#fff",
-    border: "none",
+    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
+    color: "#14251a",
+    border: "1px solid #8f9aa3",
     borderRadius: "8px",
     fontSize: "14px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
   rejectBtn: {
@@ -663,12 +662,12 @@ const styles = {
   },
   secondaryBtn: {
     padding: "10px 16px",
-    background: "rgba(255,255,255,0.12)",
-    color: "#fff",
-    border: "1px solid rgba(255,255,255,0.2)",
+    background: "linear-gradient(180deg, #d8dce1 0%, #a9b1ba 100%)",
+    color: "#14251a",
+    border: "1px solid #8f9aa3",
     borderRadius: "8px",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
   select: {
@@ -690,7 +689,7 @@ const styles = {
 
   empty:     { textAlign: "center", padding: "60px 0" },
   emptyIcon: { fontSize: "40px", margin: "0 0 8px 0" },
-  muted:     { color: "#a8c0d8", fontSize: "14px" },
+  muted:     { color: "#9aa0a6", fontSize: "14px" },
   error: {
     color: "#dc2626",
     fontSize: "13px",

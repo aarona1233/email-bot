@@ -33,6 +33,8 @@ export default function OfficeReviewPage() {
   const [address,  setAddress]  = useState("");
   const [original, setOriginal] = useState("");
   const [subject,  setSubject]  = useState("Re: Space Inquiry");
+  const [inboxId,   setInboxId]   = useState(null);
+  const [signature, setSignature] = useState("");
   const [sending,  setSending]  = useState(false);
   const [sent,     setSent]     = useState(false);
   const [error,    setError]    = useState("");
@@ -43,6 +45,8 @@ export default function OfficeReviewPage() {
     const savedAnalysis = sessionStorage.getItem("office_analysis");
     const savedAddress  = sessionStorage.getItem("office_address");
     const savedOriginal = sessionStorage.getItem("office_original");
+    const savedInboxId   = sessionStorage.getItem("office_inbox_id");
+    const savedSignature = sessionStorage.getItem("office_signature");
 
     if (!savedDraft) { router.push("/"); return; }
 
@@ -51,6 +55,8 @@ export default function OfficeReviewPage() {
     setAnalysis(JSON.parse(savedAnalysis || "{}"));
     setAddress(savedAddress || "");
     setOriginal(savedOriginal || "");
+    setInboxId(savedInboxId ? Number(savedInboxId) : null);
+    setSignature(savedSignature || "");
   }, [router]);
 
   // Strategy 1: pull URLs from space_images join (from DB)
@@ -85,6 +91,10 @@ export default function OfficeReviewPage() {
           subject,
           body: draft,
           imageUrls,
+          inboxEmailId:    inboxId,
+          originalSubject: subject,
+          originalBody:    original,
+          signatureUsed:   signature,
         }),
       });
 

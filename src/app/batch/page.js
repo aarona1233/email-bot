@@ -200,11 +200,15 @@ export default function BatchPage() {
       const payload = drafts
         .filter((d) => !sentIds.has(d.id))
         .map((d) => ({
-          inboxId:   d.id,
-          to:        testMode && testEmail ? testEmail : d.from,
-          subject:   `Re: ${d.subject}`,
-          body:      d.draft,
-          imageUrls: draftImageUrls(d),
+          inboxId:         d.id,
+          to:              testMode && testEmail ? testEmail : d.from,
+          subject:         `Re: ${d.subject}`,
+          body:            d.draft,
+          imageUrls:       draftImageUrls(d),
+          customerName:    d.from_name || null,
+          originalSubject: d.subject,
+          originalBody:    d.originalBody,
+          signatureUsed:   signature,
         }));
 
       if (payload.length === 0) {
@@ -247,7 +251,7 @@ export default function BatchPage() {
         {/* Header */}
         <div style={styles.header}>
           <div>
-            <h1 style={styles.title}>⚡ Batch Processing</h1>
+            <h1 style={styles.title}>Batch Processing</h1>
             <p style={styles.subtitle}>
               Pull new mail, select a batch, and generate all replies at once.
             </p>
@@ -305,7 +309,7 @@ export default function BatchPage() {
           <p style={styles.muted}>Loading…</p>
         ) : emails.length === 0 ? (
           <div style={styles.empty}>
-            <p style={{ fontSize: "36px", margin: 0 }}>📭</p>
+            <p style={{ fontSize: "36px", margin: 0 }}></p>
             <p style={styles.muted}>No pending emails. Fetch new mail to begin.</p>
           </div>
         ) : (
@@ -335,7 +339,7 @@ export default function BatchPage() {
                   </div>
                   <span style={styles.rowSubject}>{email.subject}</span>
                   <span style={styles.rowPreview}>
-                    {email.body.slice(0, 120)}…
+                    {(email.body || "").slice(0, 120)}…
                   </span>
                   <div style={styles.rowBtnGroup}>
                     <button
@@ -370,7 +374,7 @@ export default function BatchPage() {
         {drafts.length > 0 && (
           <div style={styles.draftsSection}>
             <h2 style={styles.draftsTitle}>
-              📝 Generated Drafts ({drafts.length})
+              Generated Drafts ({drafts.length})
             </h2>
 
             {/* Test-mode redirect */}
@@ -444,7 +448,7 @@ export default function BatchPage() {
                           style={styles.editBtn}
                           disabled={isSent}
                         >
-                          ✏️ Edit inline
+                          Edit inline
                         </button>
                       )}
                       <button
@@ -475,7 +479,7 @@ export default function BatchPage() {
                     : styles.batchSendBtn
                 }
               >
-                {sending ? "Sending…" : `📤 Send All (${drafts.filter((d) => !sentIds.has(d.id)).length})`}
+                {sending ? "Sending…" : `Send All (${drafts.filter((d) => !sentIds.has(d.id)).length})`}
               </button>
             </div>
           </div>
@@ -576,7 +580,7 @@ export default function BatchPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #1e3a5f 0%, #0f2027 100%)",
+    background: "#0b0d0f",
     padding: "32px 24px",
     fontFamily: "'Segoe UI', sans-serif",
   },
@@ -589,26 +593,26 @@ const styles = {
   },
   headerBtns: { display: "flex", gap: "10px" },
   title:    { fontSize: "26px", fontWeight: "700", color: "#fff", margin: "0 0 4px 0" },
-  subtitle: { fontSize: "14px", color: "#a8c0d8", margin: 0 },
+  subtitle: { fontSize: "14px", color: "#9aa0a6", margin: 0 },
 
   fetchBtn: {
     padding: "10px 18px",
-    background: "#3b82f6",
-    color: "#fff",
-    border: "none",
+    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
+    color: "#14251a",
+    border: "1px solid #8f9aa3",
     borderRadius: "8px",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
   secondaryBtn: {
     padding: "10px 16px",
-    background: "rgba(255,255,255,0.12)",
-    color: "#fff",
-    border: "1px solid rgba(255,255,255,0.2)",
+    background: "linear-gradient(180deg, #d8dce1 0%, #a9b1ba 100%)",
+    color: "#14251a",
+    border: "1px solid #8f9aa3",
     borderRadius: "8px",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
 
@@ -616,7 +620,7 @@ const styles = {
     display: "block",
     fontSize: "12px",
     fontWeight: "600",
-    color: "#a8c0d8",
+    color: "#9aa0a6",
     marginBottom: "6px",
   },
   signatureBox: {
@@ -624,7 +628,7 @@ const styles = {
     padding: "10px 14px",
     borderRadius: "8px",
     border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(255,255,255,0.06)",
+    background: "rgba(255,255,255,0.04)",
     color: "#fff",
     fontSize: "13px",
     fontFamily: "monospace",
@@ -642,21 +646,21 @@ const styles = {
   linkBtn: {
     background: "none",
     border: "none",
-    color: "#7dd3fc",
+    color: "#34d399",
     cursor: "pointer",
     fontSize: "13px",
     fontWeight: "600",
   },
-  count: { color: "#a8c0d8", fontSize: "13px" },
+  count: { color: "#9aa0a6", fontSize: "13px" },
   generateBtn: {
     marginLeft: "auto",
     padding: "11px 20px",
-    background: "#16a34a",
-    color: "#fff",
-    border: "none",
+    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
+    color: "#14251a",
+    border: "1px solid #8f9aa3",
     borderRadius: "8px",
     fontSize: "14px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
   btnDisabled: { background: "#64748b", cursor: "not-allowed" },
@@ -735,7 +739,7 @@ const styles = {
     borderRadius: "8px",
     marginBottom: "12px",
   },
-  muted: { color: "#a8c0d8", fontSize: "14px" },
+  muted: { color: "#9aa0a6", fontSize: "14px" },
   empty: { textAlign: "center", padding: "50px 0" },
 
   expandBtn: {
@@ -748,39 +752,6 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     padding: 0,
-  },
-  rowBtnGroup: {
-    display: "flex",
-    gap: "14px",
-    marginTop: "4px",
-  },
-  rejectLinkBtn: {
-    background: "none",
-    border: "none",
-    color: "#dc2626",
-    fontSize: "12px",
-    fontWeight: "600",
-    cursor: "pointer",
-    padding: 0,
-  },
-  select: {
-    width: "100%",
-    padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid #ddd",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    marginBottom: "4px",
-  },
-  rejectBtn: {
-    padding: "12px 20px",
-    background: "#fef2f2",
-    color: "#dc2626",
-    border: "1px solid #fecaca",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
   },
   overlay: {
     position: "fixed",
@@ -855,7 +826,7 @@ const styles = {
   },
 
   testModeBar: {
-    background: "rgba(255,255,255,0.06)",
+    background: "rgba(255,255,255,0.04)",
     border: "1px solid rgba(255,255,255,0.15)",
     borderRadius: "10px",
     padding: "14px 16px",

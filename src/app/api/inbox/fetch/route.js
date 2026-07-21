@@ -1,13 +1,18 @@
 // src/app/api/inbox/fetch/route.js
 // ─────────────────────────────────────────────────────────
-// POST here to pull new emails from the real mailbox over IMAP.
-// Returns a summary of what was ingested.
+// POST here to pull new emails from the real mailbox.
+// Supports two protocols — set which one in .env.local:
+//
+//   INBOX_PROTOCOL=imap   (default — for Gmail, most providers)
+//   INBOX_PROTOCOL=jmap   (for Fastmail, Stalwart, or your
+//                          coworker's JMAP server)
+//
+// No code changes needed to switch — same pattern as AI_PROVIDER.
 //
 // POST /api/inbox/fetch   body: { limit?: number }
 // ─────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
-import { fetchInboxOverImap } from "@/lib/imap-fetch";
 
 export async function POST(request) {
   try {
@@ -19,19 +24,25 @@ export async function POST(request) {
       // no body sent — use default
     }
 
-    const summary = await fetchInboxOverImap({ limit, markSeen: true });
+    const protocol = process.env.INBOX_PROTOCOL || "imap";
+    console.log(`[Inbox Fetch] Using protocol: ${protocol}`);
 
-    console.log("[IMAP] Fetch complete:", summary);
+    let summary;
+    if (protocol === "jmap") {
+      const { fetchInboxOverJmap } = await import("@/lib/jmap-fetch");
+      summary = await fetchInboxOverJmap({ limit, markSeen: true });
+    } else if (protocol === "imap") {
+      const { fetchInboxOverImap } = await import("@/lib/imap-fetch");
+      summary = await fetchInboxOverImap({ limit, markSeen: true });
+    } else {
+      throw new Error(`Unknown INBOX_PROTOCOL: "${protocol}". Use imap or jmap.`);
+    }
 
-    return NextResponse.json({
-      ok: true,
-      ...summary,
-    });
+    console.log("[Inbox Fetch] Complete:", summary);
+
+    return NextResponse.json({ ok: true, protocol, ...summary });
   } catch (error) {
     console.error("Error in inbox/fetch:", error.message);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

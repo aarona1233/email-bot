@@ -1,7 +1,4 @@
 // src/app/api/inbox/list/route.js
-// Returns emails filtered by status, plus heuristic accuracy stats.
-// GET /api/inbox/list?status=pending
-
 import { NextResponse } from "next/server";
 import { listEmails, getHeuristicAccuracy } from "@/lib/inbox";
 

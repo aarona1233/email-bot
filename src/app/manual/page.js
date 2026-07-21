@@ -38,7 +38,7 @@ export default function OfficePage() {
 
       if (!res.ok) {
         if (data.error === "off_topic") {
-          setError("⚠️ That doesn't look like an office space inquiry. Please paste a client email asking about renting or booking a space.");
+          setError("That doesn't look like an office space inquiry. Please paste a client email asking about renting or booking a space.");
           return;
         }
         throw new Error(data.error || "Unknown error");
@@ -67,7 +67,7 @@ export default function OfficePage() {
 
         {/* Header */}
         <div style={styles.header}>
-          <span style={styles.icon}>🏢</span>
+          <span style={styles.icon}></span>
           <div>
             <h1 style={styles.title}>Office Space Reply Bot</h1>
             <p style={styles.subtitle}>
@@ -109,12 +109,12 @@ export default function OfficePage() {
 
         {/* Tips */}
         <div style={styles.tips}>
-          <p style={styles.tipsTitle}>💡 The AI will automatically detect:</p>
+          <p style={styles.tipsTitle}>The AI will automatically detect:</p>
           <div style={styles.tipGrid}>
-            <span style={styles.tip}>🏷️ Space type requested</span>
+            <span style={styles.tip}>Space type requested</span>
             <span style={styles.tip}>⏱️ Hourly / daily / monthly</span>
-            <span style={styles.tip}>👥 Team size needs</span>
-            <span style={styles.tip}>📅 Availability &amp; urgency</span>
+            <span style={styles.tip}>Team size needs</span>
+            <span style={styles.tip}>Availability &amp; urgency</span>
           </div>
         </div>
 
@@ -136,8 +136,7 @@ export default function OfficePage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    flex: 1,
-    background: "linear-gradient(135deg, #1e3a5f 0%, #0f2027 100%)",
+    background: "#0b0d0f",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -165,7 +164,7 @@ const styles = {
   title: {
     fontSize: "24px",
     fontWeight: "700",
-    color: "#1e3a5f",
+    color: "#0d1f13",
     margin: "0 0 4px 0",
   },
   subtitle: {
@@ -214,7 +213,7 @@ const styles = {
   tipsTitle: {
     fontSize: "13px",
     fontWeight: "600",
-    color: "#1e3a5f",
+    color: "#0d1f13",
     margin: "0 0 10px 0",
   },
   tipGrid: {
@@ -229,12 +228,12 @@ const styles = {
   button: {
     width: "100%",
     padding: "14px",
-    background: "#1e3a5f",
-    color: "#fff",
-    border: "none",
+    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
+    color: "#14251a",
+    border: "1px solid #8f9aa3",
     borderRadius: "8px",
     fontSize: "15px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
   },
   buttonDisabled: {

@@ -1,15 +1,19 @@
 // src/app/api/inbox/batch-send/route.js
 // ─────────────────────────────────────────────────────────
-// Sends multiple approved drafts in one call.
-// Each item carries its own recipient, subject, body, images.
-// Reuses the same Resend logic as the single send-email route.
+// Sends multiple approved drafts in one call. Each item carries
+// its own recipient, subject, body, images, and — new — the
+// original inquiry context so it can be logged to sent_emails
+// for the end-of-day audit tab.
 //
-// POST body: { emails: [ { inboxId, to, subject, body, imageUrls } ] }
+// POST body: { emails: [ { inboxId, to, subject, body, imageUrls,
+//                           customerName, originalSubject,
+//                           originalBody, signatureUsed } ] }
 // ─────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { markReplied } from "@/lib/inbox";
+import { recordSentEmail } from "@/lib/sent";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -27,11 +31,15 @@ function buildHtml(body, imageUrls) {
         style="max-width: 500px; width: 100%; border-radius: 8px; border: 1px solid #eee; display: block;" />
     </div>`).join("");
 
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; color: #333; line-height: 1.6;">
-      <p style="white-space: pre-line;">${cleanBody}</p>
-      ${imageHtml}
-    </div>`;
+  return {
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; color: #333; line-height: 1.6;">
+        <p style="white-space: pre-line;">${cleanBody}</p>
+        ${imageHtml}
+      </div>`,
+    cleanBody,
+    allImages,
+  };
 }
 
 export async function POST(request) {
@@ -48,7 +56,10 @@ export async function POST(request) {
     const results = [];
 
     for (const item of emails) {
-      const { inboxId, to, subject, body, imageUrls } = item;
+      const {
+        inboxId, to, subject, body, imageUrls,
+        customerName, originalSubject, originalBody, signatureUsed,
+      } = item;
 
       if (!to || !body) {
         results.push({ inboxId, ok: false, error: "Missing to or body" });
@@ -56,11 +67,13 @@ export async function POST(request) {
       }
 
       try {
+        const { html, cleanBody, allImages } = buildHtml(body, imageUrls);
+
         const { data, error } = await resend.emails.send({
           from: process.env.EMAIL_FROM,
           to: [to],
           subject: subject || "Re: Your Inquiry",
-          html: buildHtml(body, imageUrls),
+          html,
         });
 
         if (error) {
@@ -70,6 +83,22 @@ export async function POST(request) {
 
         // Mark the source inbox email as replied so it leaves the queue
         if (inboxId) await markReplied(inboxId);
+
+        // Log to the sent-emails audit trail
+        await recordSentEmail({
+          inboxEmailId:    inboxId || null,
+          customerName:    customerName || null,
+          customerAddress: to,
+          originalSubject: originalSubject || null,
+          originalBody:    originalBody || null,
+          sentSubject:     subject || "Re: Your Inquiry",
+          sentBody:        cleanBody,
+          imageUrls:       allImages,
+          signatureUsed:   signatureUsed || null,
+          aiProvider:      process.env.AI_PROVIDER || null,
+          resendEmailId:   data.id,
+          sentVia:         "batch",
+        });
 
         results.push({ inboxId, ok: true, emailId: data.id, to });
       } catch (err) {
