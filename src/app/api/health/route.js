@@ -1,176 +1,126 @@
 // src/app/api/health/route.js
 // ─────────────────────────────────────────────────────────
-// Hit this endpoint to check if everything is connected.
-// Visit http://localhost:3000/api/health in your browser.
+// Admin-only system diagnostics. Checks every real component
+// the app depends on and returns specific, actionable failure
+// messages instead of a generic "something's wrong."
+//
+// Supersedes the old unauthenticated /api/debug route — that
+// route predates the auth system and should be deleted; this
+// covers everything it did and more, properly gated.
 // ─────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/require-admin";
 import { supabase } from "@/lib/supabase-office";
+import { pingProvider } from "@/lib/ai-providers";
 
-// ── Check Supabase ────────────────────────────────────────
-async function checkSupabase() {
+async function checkDatabase() {
+  const start = Date.now();
   try {
-    const { data, error } = await supabase
-      .from("office_spaces")
-      .select("count")
-      .limit(1);
+    const results = await Promise.all([
+      supabase.from("office_spaces").select("*", { count: "exact", head: true }),
+      supabase.from("inbox_emails").select("*", { count: "exact", head: true }),
+      supabase.from("sent_emails").select("*", { count: "exact", head: true }),
+    ]);
 
-    if (error) throw new Error(error.message);
-    return { ok: true, message: "Connected to Supabase" };
+    const failed = results.find((r) => r.error);
+    if (failed) {
+      return { ok: false, label: "Database", detail: `Query failed: ${failed.error.message}` };
+    }
+
+    const [spaces, inbox, sent] = results;
+    return {
+      ok: true,
+      label: "Database",
+      detail: `Connected — ${spaces.count ?? 0} spaces, ${inbox.count ?? 0} inbox emails, ${sent.count ?? 0} sent`,
+      latencyMs: Date.now() - start,
+    };
   } catch (err) {
-    return { ok: false, message: `Supabase error: ${err.message}` };
+    return { ok: false, label: "Database", detail: `Connection failed: ${err.message}` };
   }
 }
 
-// ── Check Ollama ──────────────────────────────────────────
-async function checkOllama() {
-  const model = process.env.OLLAMA_MODEL || "llama3.2";
-
+async function checkFollowUpSettings() {
   try {
-    // First check if Ollama server is even running
-    const pingRes = await fetch("http://localhost:11434", {
-      signal: AbortSignal.timeout(3000), // give up after 3 seconds
-    });
+    const { data, error } = await supabase
+      .from("follow_up_settings")
+      .select("*")
+      .order("id", { ascending: true })
+      .limit(1)
+      .single();
 
-    if (!pingRes.ok) throw new Error("Ollama server not responding");
-
-    // Then check if the specific model is actually downloaded
-    const modelsRes = await fetch("http://localhost:11434/api/tags");
-    const modelsData = await modelsRes.json();
-
-    const installedModels = modelsData.models?.map((m) => m.name) || [];
-
-    // Model names sometimes have ":latest" appended, so check both
-    const modelInstalled = installedModels.some(
-      (m) => m === model || m === `${model}:latest` || m.startsWith(model)
-    );
-
-    if (!modelInstalled) {
-      return {
-        ok: false,
-        message: `Ollama is running but model "${model}" is not installed. Run: ollama pull ${model}`,
-        installedModels: installedModels,
-      };
-    }
+    if (error) return { ok: false, label: "Follow-Up Settings", detail: `No settings row found: ${error.message}. Run the schema SQL.` };
 
     return {
       ok: true,
-      message: `Ollama running with model "${model}"`,
-      installedModels: installedModels,
+      label: "Follow-Up Settings",
+      detail: `enabled=${data.enabled}, auto_send=${data.auto_send}, wait_days=${data.wait_days}${data.paused_until ? `, paused until ${new Date(data.paused_until).toLocaleDateString()}` : ""}`,
     };
   } catch (err) {
-    if (err.name === "TimeoutError") {
-      return {
-        ok: false,
-        message: "Ollama is not running. Start it or download it from ollama.com",
-      };
+    return { ok: false, label: "Follow-Up Settings", detail: err.message };
+  }
+}
+
+async function checkResend() {
+  if (!process.env.RESEND_API_KEY) {
+    return { ok: false, label: "Resend (Email)", detail: "RESEND_API_KEY is not set in .env.local" };
+  }
+  if (!process.env.EMAIL_FROM) {
+    return { ok: false, label: "Resend (Email)", detail: "EMAIL_FROM is not set — sends will fail even with a valid key." };
+  }
+  return { ok: true, label: "Resend (Email)", detail: `Key set, sending as ${process.env.EMAIL_FROM}` };
+}
+
+async function checkInboxIngestion() {
+  const protocol = process.env.INBOX_PROTOCOL || "imap";
+
+  if (protocol === "imap") {
+    const missing = ["IMAP_HOST", "IMAP_USER", "IMAP_PASSWORD"].filter((k) => !process.env[k]);
+    if (missing.length > 0) {
+      return { ok: false, label: `Inbox Ingestion (IMAP)`, detail: `Missing: ${missing.join(", ")}` };
     }
-    return { ok: false, message: `Ollama error: ${err.message}` };
-  }
-}
-
-// ── Check Claude ──────────────────────────────────────────
-async function checkClaude() {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return { ok: false, message: "ANTHROPIC_API_KEY is not set in .env.local" };
+    return { ok: true, label: "Inbox Ingestion (IMAP)", detail: `${process.env.IMAP_USER} @ ${process.env.IMAP_HOST} — use "Force Seed Test Email" below to verify the full pipeline` };
   }
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-opus-4-6",
-        max_tokens: 10,
-        messages: [{ role: "user", content: "Hi" }],
-      }),
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (res.status === 401) return { ok: false, message: "Claude API key is invalid" };
-    if (!res.ok) return { ok: false, message: `Claude returned status ${res.status}` };
-
-    return { ok: true, message: "Claude API key is valid and working" };
-  } catch (err) {
-    return { ok: false, message: `Claude error: ${err.message}` };
-  }
-}
-
-// ── Check OpenAI ──────────────────────────────────────────
-async function checkOpenAI() {
-  if (!process.env.OPENAI_API_KEY) {
-    return { ok: false, message: "OPENAI_API_KEY is not set in .env.local" };
-  }
-
-  try {
-    const res = await fetch("https://api.openai.com/v1/models", {
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (res.status === 401) return { ok: false, message: "OpenAI API key is invalid" };
-    if (!res.ok) return { ok: false, message: `OpenAI returned status ${res.status}` };
-
-    return { ok: true, message: "OpenAI API key is valid and working" };
-  } catch (err) {
-    return { ok: false, message: `OpenAI error: ${err.message}` };
-  }
-}
-
-// ── Check Gemini ──────────────────────────────────────────
-async function checkGemini() {
-  if (!process.env.GEMINI_API_KEY) {
-    return { ok: false, message: "GEMINI_API_KEY is not set in .env.local" };
-  }
-
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-
-    if (res.status === 400 || res.status === 403) {
-      return { ok: false, message: "Gemini API key is invalid" };
+  if (protocol === "jmap") {
+    const hasAuth = process.env.JMAP_TOKEN || (process.env.JMAP_USERNAME && process.env.JMAP_PASSWORD);
+    if (!process.env.JMAP_HOST || !hasAuth) {
+      return { ok: false, label: "Inbox Ingestion (JMAP)", detail: "Missing JMAP_HOST or auth (JMAP_TOKEN or JMAP_USERNAME+JMAP_PASSWORD)" };
     }
-    if (!res.ok) return { ok: false, message: `Gemini returned status ${res.status}` };
-
-    return { ok: true, message: "Gemini API key is valid and working" };
-  } catch (err) {
-    return { ok: false, message: `Gemini error: ${err.message}` };
+    return { ok: true, label: "Inbox Ingestion (JMAP)", detail: `${process.env.JMAP_HOST}` };
   }
+
+  return { ok: false, label: "Inbox Ingestion", detail: `Unknown INBOX_PROTOCOL: "${protocol}"` };
 }
 
-// ── Main handler ──────────────────────────────────────────
 export async function GET() {
-  const provider = process.env.AI_PROVIDER || "claude";
+  const { error } = await requireAdmin();
+  if (error) return error;
 
-  // Always check Supabase
-  const supabaseStatus = await checkSupabase();
+  const aiProvider         = process.env.AI_PROVIDER || "claude";
+  const classifierProvider = process.env.CLASSIFIER_PROVIDER || "ollama";
 
-  // Only check the active AI provider
-  let aiStatus;
-  switch (provider) {
-    case "claude":  aiStatus = await checkClaude();  break;
-    case "openai":  aiStatus = await checkOpenAI();  break;
-    case "ollama":  aiStatus = await checkOllama();  break;
-    case "gemini":  aiStatus = await checkGemini();  break;
-    default:
-      aiStatus = { ok: false, message: `Unknown provider: "${provider}"` };
-  }
+  const [
+    database,
+    followUpSettings,
+    resend,
+    inboxIngestion,
+    aiProviderCheck,
+    classifierCheck,
+  ] = await Promise.all([
+    checkDatabase(),
+    checkFollowUpSettings(),
+    checkResend(),
+    checkInboxIngestion(),
+    pingProvider(aiProvider, process.env.AI_MODEL).then((r) => ({ ...r, label: `AI Provider (${aiProvider})` })),
+    pingProvider(classifierProvider, process.env.CLASSIFIER_MODEL).then((r) => ({ ...r, label: `Classifier (${classifierProvider})` })),
+  ]);
 
-  const allOk = supabaseStatus.ok && aiStatus.ok;
+  const checks = [database, aiProviderCheck, classifierCheck, inboxIngestion, resend, followUpSettings];
+  const allOk = checks.every((c) => c.ok);
 
   return NextResponse.json(
-    {
-      status: allOk ? "ok" : "error",
-      provider: provider,
-      checks: {
-        supabase: supabaseStatus,
-        ai: aiStatus,
-      },
-    },
+    { status: allOk ? "ok" : "degraded", checkedAt: new Date().toISOString(), checks },
     { status: allOk ? 200 : 500 }
   );
 }

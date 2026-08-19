@@ -7,6 +7,27 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { createClient } from "@/lib/supabase/browser";
 
+// Converts the raw SVG string Supabase returns into something every
+// browser can actually render. "data:image/svg+xml;utf8,..." looks
+// standard but "utf8" isn't a real MIME charset token in this
+// position — Firefox tolerates it as a shorthand, Chrome/Safari/Edge
+// are inconsistent. Base64 is universally supported everywhere, so
+// that's the safe default. Also handles the case where a different
+// SDK version hands back an already-complete data URI instead of
+// raw SVG markup, so this works regardless of what shape comes back.
+function svgToDataUri(svgString) {
+  if (!svgString) return "";
+  if (svgString.startsWith("data:")) return svgString;
+
+  try {
+    const base64 = btoa(unescape(encodeURIComponent(svgString)));
+    return `data:image/svg+xml;base64,${base64}`;
+  } catch (err) {
+    console.error("[MFA] base64 encode failed, falling back to percent-encoding:", err);
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
+  }
+}
+
 export default function MfaSetupPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -14,6 +35,7 @@ export default function MfaSetupPage() {
   const [factors,  setFactors]  = useState([]);
   const [enrolling, setEnrolling] = useState(false);
   const [qrCode,   setQrCode]   = useState(null);
+  const [imgFailed, setImgFailed] = useState(false);
   const [secret,   setSecret]   = useState(null);
   const [factorId, setFactorId] = useState(null);
   const [code,     setCode]     = useState("");
@@ -32,13 +54,42 @@ export default function MfaSetupPage() {
     setBusy(true);
     setError("");
     try {
-      const { data, error: enrollErr } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+      // The collision is on friendly_name, not status — every factor
+      // defaults to an empty friendly name, so ANY existing factor
+      // (verified or not) blocks a new enrollment. Since this app
+      // only supports one active factor per person anyway, clear
+      // out everything first for a guaranteed clean slate.
+      const { data: existingFactors, error: listErr } = await supabase.auth.mfa.listFactors();
+      if (listErr) throw listErr;
+
+      for (const stale of existingFactors?.totp || []) {
+        const { error: unenrollErr } = await supabase.auth.mfa.unenroll({ factorId: stale.id });
+        if (unenrollErr) {
+          throw new Error(`Couldn't remove existing factor before re-enrolling: ${unenrollErr.message}`);
+        }
+      }
+
+      // Unique name too, as a second layer of defense against
+      // the exact collision that caused this in the first place.
+      const { data, error: enrollErr } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+        friendlyName: `authenticator-${Date.now()}`,
+      });
       if (enrollErr) throw enrollErr;
+
+      console.log("[MFA enroll] response:", data);
+
+      if (!data?.totp?.qr_code) {
+        throw new Error("Supabase didn't return a QR code in the response — check the browser console for the raw response.");
+      }
+
       setFactorId(data.id);
       setQrCode(data.totp.qr_code);
       setSecret(data.totp.secret);
+      setImgFailed(false);
       setEnrolling(true);
     } catch (err) {
+      console.error("[MFA enroll] failed:", err);
       setError(err.message);
     } finally {
       setBusy(false);
@@ -120,11 +171,18 @@ export default function MfaSetupPage() {
             <div style={styles.card}>
               <p style={styles.cardTitle}>Scan this QR code</p>
               <div style={styles.qrWrap}>
-                <img
-                  src={`data:image/svg+xml;utf8,${encodeURIComponent(qrCode)}`}
-                  alt="MFA QR code"
-                  style={styles.qrImg}
-                />
+                {imgFailed ? (
+                  <p style={{ fontSize: "12px", color: "#dc2626", textAlign: "center", margin: 0 }}>
+                    QR image failed to render in this browser — no problem, just use the manual code below instead.
+                  </p>
+                ) : (
+                  <img
+                    src={svgToDataUri(qrCode)}
+                    alt="MFA QR code"
+                    style={styles.qrImg}
+                    onError={() => setImgFailed(true)}
+                  />
+                )}
               </div>
               <p style={styles.hint}>Can't scan? Enter this code manually: <code style={styles.secretCode}>{secret}</code></p>
 
