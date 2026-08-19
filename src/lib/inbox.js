@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────
 
 import { supabase, scanSignals, isRelevantInquiry } from "@/lib/supabase-office";
+import { classifyAndStore } from "@/lib/classifier";
 
 // ─────────────────────────────────────────────────────────
 // PARSING
@@ -99,6 +100,18 @@ export async function ingestEmail({ from, subject, body, messageId }) {
     return { created: false, email: null };
   }
   if (error) throw new Error(`ingestEmail: ${error.message}`);
+
+  // Local LLM classification — sorts this into customer_inquiry /
+  // vendor_pitch / spam / uncertain for human triage. Wrapped so a
+  // classifier hiccup (model down, bad JSON, whatever) never
+  // breaks ingestion itself — the email is already safely stored
+  // above regardless of what happens here. Unclassified rows can
+  // always be caught later via classifyAllPending().
+  try {
+    await classifyAndStore(data.id);
+  } catch (err) {
+    console.error(`[ingestEmail] Classification failed for ${data.id}, leaving unclassified:`, err.message);
+  }
 
   return { created: true, email: data };
 }

@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
+import { colors, glass, pageBackground } from "@/lib/theme";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function LoginPage() {
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [mfaCode,  setMfaCode]  = useState("");
-  const [stage,    setStage]    = useState("password"); // "password" | "mfa"
+  const [stage,    setStage]    = useState("password");
   const [factorId, setFactorId] = useState(null);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
@@ -25,8 +26,6 @@ export default function LoginPage() {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
 
-      // Does this account have MFA enrolled and does the session
-      // need a second factor before it's fully authenticated?
       const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
       if (aal.nextLevel === "aal2" && aal.nextLevel !== aal.currentLevel) {
@@ -107,7 +106,7 @@ export default function LoginPage() {
               maxLength={6}
               value={mfaCode}
               onChange={(e) => setMfaCode(e.target.value)}
-              style={{ ...styles.input, textAlign: "center", fontSize: "22px", letterSpacing: "6px" }}
+              style={{ ...styles.input, textAlign: "center", fontSize: "22px", letterSpacing: "8px" }}
               autoFocus
             />
             <button type="submit" disabled={loading} style={styles.button}>
@@ -123,40 +122,39 @@ export default function LoginPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#0b0d0f",
+    ...pageBackground,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontFamily: "'Segoe UI', sans-serif",
+    padding: "24px",
   },
   card: {
-    background: "#16191c",
-    border: "1px solid #2a2e33",
-    borderRadius: "14px",
-    padding: "40px",
+    ...glass.panelStrong,
+    padding: "44px 40px",
     width: "100%",
-    maxWidth: "380px",
+    maxWidth: "400px",
   },
-  title:    { fontSize: "22px", fontWeight: "700", color: "#e8eaed", margin: "0 0 4px 0" },
-  subtitle: { fontSize: "13px", color: "#9aa0a6", margin: "0 0 24px 0" },
+  title:    { fontSize: "23px", fontWeight: "700", color: colors.textPrimary, margin: "0 0 4px 0" },
+  subtitle: { fontSize: "13px", color: colors.textSecondary, margin: "0 0 26px 0" },
   label: {
     display: "block", fontSize: "12px", fontWeight: "600",
-    color: "#9aa0a6", marginBottom: "6px", marginTop: "14px",
+    color: colors.textSecondary, marginBottom: "6px", marginTop: "16px",
   },
   input: {
-    width: "100%", padding: "10px 14px", borderRadius: "8px",
-    border: "1px solid #2a2e33", background: "#0b0d0f", color: "#e8eaed",
-    fontSize: "14px", boxSizing: "border-box", outline: "none",
+    ...glass.input,
+    width: "100%", padding: "12px 16px",
+    fontSize: "14px", boxSizing: "border-box",
   },
   button: {
-    width: "100%", marginTop: "22px", padding: "13px",
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a", border: "1px solid #8f9aa3", borderRadius: "8px",
-    fontSize: "14px", fontWeight: "700", cursor: "pointer",
+    ...glass.buttonPrimary,
+    width: "100%", marginTop: "26px", padding: "14px",
+    fontSize: "14.5px",
   },
-  mfaNote: { fontSize: "13px", color: "#9aa0a6", marginBottom: "14px" },
+  mfaNote: { fontSize: "13px", color: colors.textSecondary, marginBottom: "16px", lineHeight: "1.5" },
   error: {
-    color: "#dc2626", fontSize: "13px", marginBottom: "14px",
-    padding: "10px", background: "#fef2f2", borderRadius: "6px",
+    color: "#fca5a5", fontSize: "13px", marginBottom: "14px",
+    padding: "11px 14px", background: colors.dangerSoft,
+    border: "1px solid rgba(248,113,113,0.25)", borderRadius: "12px",
   },
 };

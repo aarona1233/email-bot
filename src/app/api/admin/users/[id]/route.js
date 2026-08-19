@@ -6,24 +6,8 @@
 // ─────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/require-admin";
 import { supabase } from "@/lib/supabase-office";
-
-async function requireAdmin() {
-  const user = await getSessionUser();
-  if (!user) return { error: NextResponse.json({ error: "Not signed in." }, { status: 401 }) };
-
-  const { data: callerProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (callerProfile?.role !== "admin") {
-    return { error: NextResponse.json({ error: "Admin access required." }, { status: 403 }) };
-  }
-  return { user };
-}
 
 export async function PATCH(request, { params }) {
   const { error } = await requireAdmin();

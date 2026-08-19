@@ -14,6 +14,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { colors, glass, pageBackground, type } from "@/lib/theme";
 
 const REJECT_REASONS = [
   "Spam / promotional",
@@ -31,6 +32,29 @@ const STATUS_TABS = [
   { key: "all",      label: "All"      },
 ];
 
+// What the local LLM classifier decided — display label + color
+// per category. "spam" deliberately reuses the same red as the
+// heuristic's "likely spam" so the two signals read consistently.
+function categoryLabel(category) {
+  switch (category) {
+    case "customer_inquiry": return "customer";
+    case "vendor_pitch":     return "vendor pitch";
+    case "spam":             return "spam";
+    case "uncertain":        return "uncertain";
+    default:                 return category;
+  }
+}
+
+function categoryBadgeStyle(category) {
+  switch (category) {
+    case "customer_inquiry": return { background: "#dbeafe", color: "#1d4ed8" };
+    case "vendor_pitch":     return { background: "#fef3c7", color: "#92400e" };
+    case "spam":             return { background: "#fee2e2", color: "#dc2626" };
+    case "uncertain":        return { background: "#f1f5f9", color: "#64748b" };
+    default:                 return { background: "#f1f5f9", color: "#64748b" };
+  }
+}
+
 export default function InboxPage() {
   const router = useRouter();
 
@@ -41,6 +65,7 @@ export default function InboxPage() {
   const [loading,  setLoading]  = useState(true);
   const [busy,     setBusy]     = useState(false);
   const [error,    setError]    = useState("");
+  const [classifying, setClassifying] = useState(false);
 
   // Reject modal state
   const [rejecting,    setRejecting]    = useState(false);
@@ -108,6 +133,25 @@ export default function InboxPage() {
   }, [tab, log]);
 
   useEffect(() => { loadEmails(); }, [loadEmails]);
+
+  async function handleClassifyPending() {
+    setClassifying(true);
+    setError("");
+    try {
+      const res  = await fetch("/api/inbox/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 25 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Classification failed");
+      await loadEmails();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClassifying(false);
+    }
+  }
 
   // ── Approve: label it, generate a draft, go to review ──
   async function handleApprove(email) {
@@ -188,7 +232,7 @@ export default function InboxPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
       <Sidebar active="inbox" />
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
       <div style={styles.container}>
@@ -222,7 +266,7 @@ export default function InboxPage() {
             maxHeight: "220px",
             overflowY: "auto",
           }}>
-            <div style={{ color: "#34d399", fontWeight: "bold", marginBottom: "8px" }}>
+            <div style={{ color: colors.accent, fontWeight: "bold", marginBottom: "8px" }}>
               DEBUG — loading: {String(loading)} | emails: {emails.length} | error: {error || "none"}
             </div>
             {debugLog.length === 0
@@ -249,59 +293,70 @@ export default function InboxPage() {
           </div>
         )}
 
-        {/* Header */}
-        <div style={styles.header}>
-          <div>
-            <h1 style={styles.title}>Inbox Triage</h1>
-            <p style={styles.subtitle}>
-              Review incoming inquiries. Every decision trains the future screening AI.
-            </p>
+        {/* One unified glass surface for title + stats + tabs —
+            Apple's own guidance treats a title and any controls
+            pinned directly beneath it as a single "hard style"
+            glass block, not separate floating pieces. */}
+        <div style={styles.pageHeaderBlock}>
+          <div style={styles.header}>
+            <div>
+              <h1 style={type.pageTitle}>Inbox Triage</h1>
+              <p style={type.pageSubtitle}>
+                Review incoming inquiries. Every decision trains the future screening AI.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={handleClassifyPending} disabled={classifying} style={styles.secondaryBtn}>
+                {classifying ? "Classifying…" : "Classify Pending"}
+              </button>
+              <button onClick={() => router.push("/manual")} style={styles.secondaryBtn}>
+                Manual Reply →
+              </button>
+            </div>
           </div>
-          <button onClick={() => router.push("/manual")} style={styles.secondaryBtn}>
-            Manual Reply →
-          </button>
-        </div>
 
-        {/* Heuristic scoreboard */}
-        {accuracy && accuracy.total > 0 && (
-          <div style={styles.statsBar}>
-            <div style={styles.stat}>
-              <span style={styles.statValue}>{accuracy.total}</span>
-              <span style={styles.statLabel}>Reviewed</span>
+          {/* Heuristic scoreboard */}
+          {accuracy && accuracy.total > 0 && (
+            <div style={styles.statsBar}>
+              <div style={styles.stat}>
+                <span style={type.statNumber}>{accuracy.total}</span>
+                <span style={type.statLabel}>Reviewed</span>
+              </div>
+              <div style={styles.stat}>
+                <span style={type.statNumber}>{accuracy.accuracy}%</span>
+                <span style={type.statLabel}>Keyword scanner accuracy</span>
+              </div>
+              <div style={styles.stat}>
+                <span style={{ ...type.statNumber, color: "#f87171" }}>
+                  {accuracy.falsePositives}
+                </span>
+                <span style={type.statLabel}>Spam it would let through</span>
+              </div>
+              <div style={styles.stat}>
+                <span style={{ ...type.statNumber, color: "#fbbf24" }}>
+                  {accuracy.falseNegatives}
+                </span>
+                <span style={type.statLabel}>Real leads it would drop</span>
+              </div>
+              <a href="/api/inbox/training-export" style={styles.exportBtn}>
+                ⬇ Export training data
+              </a>
             </div>
-            <div style={styles.stat}>
-              <span style={styles.statValue}>{accuracy.accuracy}%</span>
-              <span style={styles.statLabel}>Keyword scanner accuracy</span>
-            </div>
-            <div style={styles.stat}>
-              <span style={{ ...styles.statValue, color: "#dc2626" }}>
-                {accuracy.falsePositives}
-              </span>
-              <span style={styles.statLabel}>Spam it would let through</span>
-            </div>
-            <div style={styles.stat}>
-              <span style={{ ...styles.statValue, color: "#ca8a04" }}>
-                {accuracy.falseNegatives}
-              </span>
-              <span style={styles.statLabel}>Real leads it would drop</span>
-            </div>
-            <a href="/api/inbox/training-export" style={styles.exportBtn}>
-              ⬇ Export training data
-            </a>
+          )}
+
+          {/* Tabs — capsule shaped, per the shape system's rule
+              that primary controls use capsules, not rounded rects */}
+          <div style={styles.tabs}>
+            {STATUS_TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => { setTab(t.key); setSelected(null); }}
+                style={tab === t.key ? { ...styles.tab, ...styles.tabActive } : styles.tab}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
-        )}
-
-        {/* Tabs */}
-        <div style={styles.tabs}>
-          {STATUS_TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => { setTab(t.key); setSelected(null); }}
-              style={tab === t.key ? { ...styles.tab, ...styles.tabActive } : styles.tab}
-            >
-              {t.label}
-            </button>
-          ))}
         </div>
 
         {error && <p style={styles.error}>{error}</p>}
@@ -326,16 +381,24 @@ export default function InboxPage() {
                   <strong style={styles.cardFrom}>
                     {email.from_name || email.from_address}
                   </strong>
-                  {/* What the keyword scanner guessed, before any human looked */}
-                  <span
-                    style={{
-                      ...styles.guessBadge,
-                      background: email.heuristic_prediction ? "#dcfce7" : "#fee2e2",
-                      color:      email.heuristic_prediction ? "#16a34a" : "#dc2626",
-                    }}
-                  >
-                    {email.heuristic_prediction ? "likely valid" : "likely spam"}
-                  </span>
+                  <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                    {/* What the local LLM classifier decided — the newer, smarter signal */}
+                    {email.category && (
+                      <span style={{ ...styles.guessBadge, ...categoryBadgeStyle(email.category) }}>
+                        {categoryLabel(email.category)}
+                      </span>
+                    )}
+                    {/* What the keyword scanner guessed, before any human looked */}
+                    <span
+                      style={{
+                        ...styles.guessBadge,
+                        background: email.heuristic_prediction ? "#dcfce7" : "#fee2e2",
+                        color:      email.heuristic_prediction ? "#16a34a" : "#dc2626",
+                      }}
+                    >
+                      {email.heuristic_prediction ? "likely valid" : "likely spam"}
+                    </span>
+                  </div>
                 </div>
 
                 <p style={styles.cardSubject}>{email.subject}</p>
@@ -391,6 +454,24 @@ export default function InboxPage() {
 
             <p style={styles.modalLabel}>Body</p>
             <div style={styles.modalBody}>{selected.body}</div>
+
+            {/* What the local LLM classifier decided, and why */}
+            {selected.category && (
+              <>
+                <p style={styles.modalLabel}>Classifier verdict</p>
+                <div style={styles.signalRow}>
+                  <span style={{ ...styles.signalBadge, ...categoryBadgeStyle(selected.category) }}>
+                    {categoryLabel(selected.category)}
+                    {selected.category_confidence ? ` · ${selected.category_confidence} confidence` : ""}
+                  </span>
+                </div>
+                {selected.category_reasoning && (
+                  <p style={{ fontSize: "12px", color: "#64748b", marginTop: "6px", fontStyle: "italic" }}>
+                    "{selected.category_reasoning}"
+                  </p>
+                )}
+              </>
+            )}
 
             {/* Signals the keyword scanner picked up */}
             {selected.heuristic_signals &&
@@ -476,60 +557,58 @@ export default function InboxPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#0b0d0f",
     padding: "32px 24px",
     fontFamily: "'Segoe UI', sans-serif",
   },
   container: { maxWidth: "1100px", margin: "0 auto" },
+
+  pageHeaderBlock: {
+    ...glass.pageHeader,
+    padding: "24px 26px 18px",
+    marginBottom: "24px",
+  },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: "24px",
+    marginBottom: "18px",
   },
-  title:    { fontSize: "26px", fontWeight: "700", color: "#fff", margin: "0 0 4px 0" },
-  subtitle: { fontSize: "14px", color: "#9aa0a6", margin: 0 },
 
   statsBar: {
     display: "flex",
     gap: "28px",
     alignItems: "center",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: "12px",
-    padding: "16px 20px",
-    marginBottom: "20px",
+    borderTop: `1px solid ${colors.glassBorder}`,
+    paddingTop: "16px",
+    marginBottom: "16px",
     flexWrap: "wrap",
   },
   stat:      { display: "flex", flexDirection: "column" },
-  statValue: { fontSize: "20px", fontWeight: "700", color: "#fff" },
-  statLabel: { fontSize: "11px", color: "#9aa0a6", marginTop: "2px" },
   exportBtn: {
     marginLeft: "auto",
-    fontSize: "13px",
-    color: "#fff",
-    background: "rgba(255,255,255,0.12)",
-    padding: "8px 14px",
-    borderRadius: "8px",
+    fontSize: "12.5px",
+    color: colors.textPrimary,
+    background: "rgba(255,255,255,0.07)",
+    border: `1px solid ${colors.glassBorderStrong}`,
+    padding: "8px 16px",
+    borderRadius: glass.radiusPill,
     textDecoration: "none",
     fontWeight: "600",
   },
 
-  tabs: { display: "flex", gap: "8px", marginBottom: "20px" },
-  tab: {
-    padding: "8px 16px",
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.15)",
-    background: "transparent",
-    color: "#9aa0a6",
-    fontSize: "13px",
-    fontWeight: "600",
-    cursor: "pointer",
+  tabs: {
+    display: "flex",
+    gap: "6px",
+    borderTop: `1px solid ${colors.glassBorder}`,
+    paddingTop: "14px",
   },
-  tabActive: {
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a",
-    border: "1px solid #8f9aa3",
+  tab: { ...glass.tab },
+  tabActive: { ...glass.tabActive },
+
+  secondaryBtn: {
+    ...glass.buttonSecondary,
+    padding: "9px 16px",
+    fontSize: "13px",
   },
 
   grid: {
@@ -662,16 +741,6 @@ const styles = {
     borderRadius: "8px",
     fontSize: "14px",
     fontWeight: "600",
-    cursor: "pointer",
-  },
-  secondaryBtn: {
-    padding: "10px 16px",
-    background: "linear-gradient(180deg, #d8dce1 0%, #a9b1ba 100%)",
-    color: "#14251a",
-    border: "1px solid #8f9aa3",
-    borderRadius: "8px",
-    fontSize: "13px",
-    fontWeight: "700",
     cursor: "pointer",
   },
   select: {

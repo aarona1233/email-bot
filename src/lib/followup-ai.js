@@ -6,6 +6,7 @@
 // labels, never in what the customer actually receives.
 // ─────────────────────────────────────────────────────────
 
+import { callProvider } from "@/lib/ai-providers";
 function buildPrompt(sentEmail, followUpNumber) {
   const firstNameGuess = sentEmail.customer_name
     ? sentEmail.customer_name.split(" ")[0]
@@ -36,102 +37,16 @@ Write the follow-up email now. Output ONLY the email body — no subject line, n
   return { systemPrompt, userMessage };
 }
 
-// ── Provider calls — same pattern as ai-office.js ─────────
-
-async function callClaude(systemPrompt, userMessage) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-opus-4-6",
-      max_tokens: 400,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
-    }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Claude API error");
-  return data.content[0].text;
-}
-
-async function callOpenAI(systemPrompt, userMessage) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      max_tokens: 400,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user",   content: userMessage  },
-      ],
-    }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "OpenAI API error");
-  return data.choices[0].message.content;
-}
-
-async function callOllama(systemPrompt, userMessage) {
-  const model = process.env.OLLAMA_MODEL || "llama3.2";
-  const response = await fetch("http://localhost:11434/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      stream: false,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user",   content: userMessage  },
-      ],
-    }),
-  });
-  if (!response.ok) throw new Error(`Ollama error ${response.status}`);
-  const data = await response.json();
-  if (!data.message?.content) throw new Error("Unexpected Ollama response");
-  return data.message.content;
-}
-
-async function callGemini(systemPrompt, userMessage) {
-  const model = "gemini-1.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: "user", parts: [{ text: userMessage }] }],
-    }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Gemini API error");
-  return data.candidates[0].content.parts[0].text;
-}
-
 // ── Main export ───────────────────────────────────────────
-
+// Provider calls live in @/lib/ai-providers — see ai-office.js
+// for the same change; this used to have an identical copy.
 export async function generateFollowUpDraft(sentEmail, followUpNumber = 1) {
   const { systemPrompt, userMessage } = buildPrompt(sentEmail, followUpNumber);
 
   const provider = process.env.AI_PROVIDER || "claude";
   console.log(`[FollowUp AI] Provider: ${provider} | Follow-up #${followUpNumber} for ${sentEmail.customer_address}`);
 
-  let body;
-  switch (provider) {
-    case "claude":  body = await callClaude(systemPrompt, userMessage);  break;
-    case "openai":  body = await callOpenAI(systemPrompt, userMessage); break;
-    case "ollama":  body = await callOllama(systemPrompt, userMessage); break;
-    case "gemini":  body = await callGemini(systemPrompt, userMessage); break;
-    default:
-      throw new Error(`Unknown AI_PROVIDER: "${provider}"`);
-  }
+  const body = await callProvider(provider, systemPrompt, userMessage, { maxTokens: 400 });
 
   const subject = followUpNumber > 1
     ? `Re: ${sentEmail.sent_subject || "Your Inquiry"} — following up again`
