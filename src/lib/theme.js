@@ -10,16 +10,16 @@
 // dominant blobs, and every accent rgba() in Sidebar.js — derives
 // from this single triplet now. Swap the whole app's accent hue
 // by changing this one line, and only this one line.
-const ACCENT_RGB = "164, 172, 134"; // emerald
+const ACCENT_RGB = "52,211,153"; // emerald
 
 // A fixed complementary hue for the background mesh's secondary
 // blobs. Deliberately NOT tied to ACCENT_RGB — a background needs
 // at least two colors to read as a "mesh" rather than one flat
 // tinted patch, so this stays put even when you swap the accent.
-const SECONDARY_RGB = "164, 172, 134"; // indigo
+const SECONDARY_RGB = "45,55,120"; // indigo
 
 export const colors = {
-  bgBase:      "#dadad2",
+  bgBase:      "#08090b",
   textPrimary: "#f1f3f2",
   textSecondary: "#9aa5a1",
   textMuted:   "#68736f",
@@ -37,6 +37,12 @@ export const colors = {
   glassBgStrong: "rgba(255,255,255,0.14)",
   glassBorder:       "rgba(255,255,255,0.13)",
   glassBorderStrong: "rgba(255,255,255,0.22)",
+
+  // Sidebar's own self-tint, independent of backdrop-filter reach.
+  // Kept as its own token (not hardcoded in Sidebar.js) so swapping
+  // to a light variant actually reaches the sidebar too.
+  sidebarTintTop:    "rgba(14,28,22,0.5)",
+  sidebarTintBottom: "rgba(10,12,14,0.6)",
 };
 
 // The colorful wash behind every page — this is what makes the
@@ -180,3 +186,65 @@ export const type = {
     marginTop: "2px",
   },
 };
+
+// ── Motion — real Apple pattern, not a plain fade ──────────
+// Apple's own language: elements "materialize by modulating
+// light bending and lensing," and things like sheets/menus
+// "morph out of the buttons that present them." The web-safe
+// approximation: animate blur + scale + opacity TOGETHER (not
+// opacity alone) with a slight overshoot-then-settle timing,
+// so it reads as condensing INTO focus rather than a flat fade.
+//
+// Delivered as a runtime-injected <style> tag rather than
+// styled-jsx — same reasoning as Sidebar.js: avoids a real
+// Turbopack compile hang seen with styled-jsx on this Next.js
+// version. Call once per page that uses it; the id guard stops
+// duplicate injection across re-renders/navigations.
+export function ensureMotionStyles() {
+  if (typeof document === "undefined") return; // SSR guard
+  if (document.getElementById("liquid-glass-motion")) return;
+
+  const style = document.createElement("style");
+  style.id = "liquid-glass-motion";
+  style.textContent = `
+    @keyframes materializeIn {
+      0%   { opacity: 0; transform: scale(0.92); filter: blur(14px); }
+      60%  { opacity: 1; transform: scale(1.015); filter: blur(0px); }
+      100% { opacity: 1; transform: scale(1); filter: blur(0px); }
+    }
+    @keyframes materializeBackdrop {
+      0%   { opacity: 0; backdrop-filter: blur(0px); }
+      100% { opacity: 1; backdrop-filter: blur(6px); }
+    }
+    .materialize-in {
+      animation: materializeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .materialize-backdrop {
+      animation: materializeBackdrop 0.3s ease both;
+    }
+    /* The thin chromatic edge from the reference image — a
+       sliver of soft color dispersion, not a tinted surface.
+       Sits along the bottom edge of a glass panel only. */
+    .chromatic-edge {
+      position: relative;
+    }
+    .chromatic-edge::after {
+      content: "";
+      position: absolute;
+      left: 8%; right: 8%; bottom: -1px;
+      height: 1.5px;
+      /* Sampled directly from Apple's own WWDC25 reference image —
+         a real prism sweep (cyan / warm yellow / soft green-pink),
+         not a guessed rainbow. */
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(188,225,233,0.4) 20%,
+        rgba(241,229,177,0.45) 50%,
+        rgba(185,235,200,0.4) 80%,
+        transparent 100%);
+      border-radius: 999px;
+      pointer-events: none;
+    }
+  `;
+  document.head.appendChild(style);
+}

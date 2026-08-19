@@ -14,7 +14,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import { colors, glass, pageBackground, type } from "@/lib/theme";
+import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 
 const REJECT_REASONS = [
   "Spam / promotional",
@@ -133,6 +133,7 @@ export default function InboxPage() {
   }, [tab, log]);
 
   useEffect(() => { loadEmails(); }, [loadEmails]);
+  useEffect(() => { ensureMotionStyles(); }, []);
 
   async function handleClassifyPending() {
     setClassifying(true);
@@ -431,8 +432,8 @@ export default function InboxPage() {
 
       {/* ── Detail modal ─────────────────────────────────── */}
       {selected && (
-        <div style={styles.overlay} onClick={() => !busy && setSelected(null)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className="materialize-backdrop" style={styles.overlay} onClick={() => !busy && setSelected(null)}>
+          <div className="materialize-in chromatic-edge" style={styles.modal} onClick={(e) => e.stopPropagation()}>
 
             <button
               onClick={() => setSelected(null)}

@@ -288,7 +288,7 @@ const styles = {
     // technically behind it — approximates Apple's "color
     // informed by surrounding content" even in browsers where
     // backdrop-filter-through-fixed-background is inconsistent.
-    background: "linear-gradient(180deg, rgba(14,28,22,0.5) 0%, rgba(10,12,14,0.6) 100%)",
+    background: `linear-gradient(180deg, ${colors.sidebarTintTop} 0%, ${colors.sidebarTintBottom} 100%)`,
     backdropFilter: "blur(30px) saturate(150%)",
     WebkitBackdropFilter: "blur(30px) saturate(150%)",
     borderRight: `1px solid ${colors.glassBorder}`,
