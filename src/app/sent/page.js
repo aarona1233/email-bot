@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
+import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 
 export default function SentPage() {
   const [emails,   setEmails]   = useState([]);
@@ -41,6 +42,7 @@ export default function SentPage() {
   }, []);
 
   useEffect(() => { loadSent(); }, [loadSent]);
+  useEffect(() => { ensureMotionStyles(); }, []);
 
   const filtered = emails.filter((e) => {
     if (!search.trim()) return true;
@@ -99,7 +101,7 @@ export default function SentPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
       <Sidebar active="sent" />
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
         <div style={styles.container}>
@@ -157,8 +159,8 @@ export default function SentPage() {
                   <span style={styles.cardAddress}>{email.customer_address}</span>
                   <span style={styles.cardSubject}>{email.sent_subject}</span>
                   <p style={styles.cardPreview}>
-                    {email.sent_body?.slice(0, 130)}
-                    {email.sent_body?.length > 130 ? "…" : ""}
+                    {email.sent_body?.slice(0, 260)}
+                    {email.sent_body?.length > 260 ? "…" : ""}
                   </p>
                   <span style={styles.cardDate}>
                     {new Date(email.sent_at).toLocaleString()}
@@ -171,8 +173,8 @@ export default function SentPage() {
 
         {/* ── Expanded detail modal ─────────────────────────── */}
         {selected && (
-          <div style={styles.overlay} onClick={() => setSelected(null)}>
-            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div className="materialize-backdrop" style={styles.overlay} onClick={() => setSelected(null)}>
+            <div className="materialize-in chromatic-edge" style={styles.modal} onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setSelected(null)} style={styles.closeBtn}>
                 ✕
               </button>
@@ -285,7 +287,6 @@ export default function SentPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#0b0d0f",
     padding: "32px 24px",
     fontFamily: "'Segoe UI', sans-serif",
   },
@@ -297,32 +298,26 @@ const styles = {
     alignItems: "flex-start",
     marginBottom: "20px",
   },
-  title:    { fontSize: "26px", fontWeight: "700", color: "#e8eaed", margin: "0 0 4px 0" },
-  subtitle: { fontSize: "14px", color: "#9aa0a6", margin: 0, maxWidth: "520px" },
+  title:    { ...type.pageTitle },
+  subtitle: { ...type.pageSubtitle, maxWidth: "520px" },
 
   statBadge: {
+    ...glass.panel,
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-end",
-    background: "#16191c",
-    border: "1px solid #2a2e33",
-    borderRadius: "10px",
     padding: "10px 18px",
   },
   statNumber: { fontSize: "22px", fontWeight: "700", color: "#34d399" },
   statLabel:  { fontSize: "11px", color: "#9aa0a6" },
 
   search: {
+    ...glass.input,
     width: "100%",
     padding: "11px 16px",
-    borderRadius: "8px",
-    border: "1px solid #2a2e33",
-    background: "#16191c",
-    color: "#e8eaed",
     fontSize: "13px",
     boxSizing: "border-box",
     marginBottom: "20px",
-    outline: "none",
   },
 
   grid: {

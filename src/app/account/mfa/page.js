@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 import { createClient } from "@/lib/supabase/browser";
 
 // Converts the raw SVG string Supabase returns into something every
@@ -134,7 +135,7 @@ export default function MfaSetupPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
       <Sidebar active="account" />
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
         <div style={styles.container}>
@@ -207,13 +208,13 @@ export default function MfaSetupPage() {
 }
 
 const styles = {
-  page: { minHeight: "100vh", background: "#0b0d0f", padding: "32px 24px", fontFamily: "'Segoe UI', sans-serif" },
+  page: { minHeight: "100vh", padding: "32px 24px", fontFamily: "'Segoe UI', sans-serif" },
   container: { maxWidth: "480px", margin: "0 auto" },
   backBtn: { background: "none", border: "none", color: "#34d399", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "16px", padding: 0 },
   title:    { fontSize: "22px", fontWeight: "700", color: "#e8eaed", margin: "0 0 4px 0" },
   subtitle: { fontSize: "13px", color: "#9aa0a6", margin: "0 0 24px 0", lineHeight: "1.5" },
 
-  card: { background: "#16191c", border: "1px solid #2a2e33", borderRadius: "12px", padding: "22px", marginBottom: "16px" },
+  card: { ...glass.panel, padding: "22px", marginBottom: "16px" },
   cardTitle: { fontSize: "15px", fontWeight: "700", color: "#e8eaed", margin: "0 0 8px 0" },
   hint: { fontSize: "12.5px", color: "#9aa0a6", lineHeight: "1.5" },
 
@@ -225,12 +226,11 @@ const styles = {
   secretCode: { background: "#0b0d0f", padding: "2px 6px", borderRadius: "4px", color: "#34d399" },
 
   label: { display: "block", fontSize: "12.5px", fontWeight: "700", color: "#e8eaed", margin: "14px 0 6px 0" },
-  input: { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #2a2e33", background: "#0b0d0f", color: "#e8eaed", boxSizing: "border-box" },
+  input: { width: "100%", padding: "10px 14px", borderRadius: "8px", ...glass.input, boxSizing: "border-box" },
 
   enrollBtn: {
     width: "100%", marginTop: "14px", padding: "12px",
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a", border: "1px solid #8f9aa3", borderRadius: "8px",
+    ...glass.buttonPrimary,
     fontSize: "13px", fontWeight: "700", cursor: "pointer",
   },
   error: { color: "#dc2626", fontSize: "13px", marginBottom: "12px", padding: "10px", background: "#fef2f2", borderRadius: "6px" },

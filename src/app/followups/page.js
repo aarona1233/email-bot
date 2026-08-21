@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
+import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 
 const TABS = [
   { key: "pending_review", label: "Pending" },
@@ -41,6 +42,7 @@ export default function FollowUpsPage() {
   }, [tab]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { ensureMotionStyles(); }, []);
 
   function openItem(item) {
     setSelected(item);
@@ -90,7 +92,7 @@ export default function FollowUpsPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
       <Sidebar active="followups" />
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
         <div style={styles.container}>
@@ -146,8 +148,8 @@ export default function FollowUpsPage() {
         </div>
 
         {selected && (
-          <div style={styles.overlay} onClick={() => !busy && setSelected(null)}>
-            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div className="materialize-backdrop" style={styles.overlay} onClick={() => !busy && setSelected(null)}>
+            <div className="materialize-in chromatic-edge" style={styles.modal} onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setSelected(null)} style={styles.closeBtn} disabled={busy}>✕</button>
 
               <div style={styles.contactBlock}>
@@ -199,31 +201,17 @@ export default function FollowUpsPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#0b0d0f",
     padding: "32px 24px",
     fontFamily: "'Segoe UI', sans-serif",
   },
   container: { maxWidth: "1100px", margin: "0 auto" },
 
-  title:    { fontSize: "26px", fontWeight: "700", color: "#e8eaed", margin: "0 0 4px 0" },
-  subtitle: { fontSize: "14px", color: "#9aa0a6", margin: "0 0 20px 0", maxWidth: "560px" },
+  title:    { ...type.pageTitle },
+  subtitle: { ...type.pageSubtitle, marginBottom: "20px", maxWidth: "560px" },
 
   tabs: { display: "flex", gap: "8px", marginBottom: "20px" },
-  tab: {
-    padding: "8px 16px",
-    borderRadius: "8px",
-    border: "1px solid #2a2e33",
-    background: "transparent",
-    color: "#9aa0a6",
-    fontSize: "13px",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  tabActive: {
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a",
-    border: "1px solid #8f9aa3",
-  },
+  tab: { ...glass.tab },
+  tabActive: { ...glass.tabActive },
 
   grid: {
     display: "grid",

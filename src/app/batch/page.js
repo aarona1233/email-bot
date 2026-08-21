@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 
 const REJECT_REASONS = [
   "Spam / promotional",
@@ -65,6 +66,7 @@ export default function BatchPage() {
   }, []);
 
   useEffect(() => { loadPending(); }, [loadPending]);
+  useEffect(() => { ensureMotionStyles(); }, []);
 
   // ── Fetch new mail over IMAP ───────────────────────────
   async function handleFetch() {
@@ -248,7 +250,7 @@ export default function BatchPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
       <Sidebar active="batch" />
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
       <div style={styles.container}>
@@ -342,7 +344,7 @@ export default function BatchPage() {
                   </div>
                   <span style={styles.rowSubject}>{email.subject}</span>
                   <span style={styles.rowPreview}>
-                    {(email.body || "").slice(0, 120)}…
+                    {(email.body || "").slice(0, 280)}…
                   </span>
                   <div style={styles.rowBtnGroup}>
                     <button
@@ -491,8 +493,8 @@ export default function BatchPage() {
 
       {/* ── Expanded email modal ─────────────────────────── */}
       {expanded && (
-        <div style={styles.overlay} onClick={() => setExpanded(null)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className="materialize-backdrop" style={styles.overlay} onClick={() => setExpanded(null)}>
+          <div className="materialize-in chromatic-edge" style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setExpanded(null)} style={styles.closeBtn}>
               ✕
             </button>
@@ -583,7 +585,6 @@ export default function BatchPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#0b0d0f",
     padding: "32px 24px",
     fontFamily: "'Segoe UI', sans-serif",
   },
@@ -595,28 +596,18 @@ const styles = {
     marginBottom: "20px",
   },
   headerBtns: { display: "flex", gap: "10px" },
-  title:    { fontSize: "26px", fontWeight: "700", color: "#fff", margin: "0 0 4px 0" },
-  subtitle: { fontSize: "14px", color: "#9aa0a6", margin: 0 },
+  title:    { ...type.pageTitle },
+  subtitle: { ...type.pageSubtitle },
 
   fetchBtn: {
+    ...glass.buttonPrimary,
     padding: "10px 18px",
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a",
-    border: "1px solid #8f9aa3",
-    borderRadius: "8px",
     fontSize: "13px",
-    fontWeight: "700",
-    cursor: "pointer",
   },
   secondaryBtn: {
+    ...glass.buttonSecondary,
     padding: "10px 16px",
-    background: "linear-gradient(180deg, #d8dce1 0%, #a9b1ba 100%)",
-    color: "#14251a",
-    border: "1px solid #8f9aa3",
-    borderRadius: "8px",
     fontSize: "13px",
-    fontWeight: "700",
-    cursor: "pointer",
   },
 
   label: {
@@ -627,12 +618,9 @@ const styles = {
     marginBottom: "6px",
   },
   signatureBox: {
+    ...glass.input,
     width: "100%",
     padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#fff",
     fontSize: "13px",
     fontFamily: "monospace",
     boxSizing: "border-box",
@@ -656,15 +644,10 @@ const styles = {
   },
   count: { color: "#9aa0a6", fontSize: "13px" },
   generateBtn: {
+    ...glass.buttonPrimary,
     marginLeft: "auto",
     padding: "11px 20px",
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a",
-    border: "1px solid #8f9aa3",
-    borderRadius: "8px",
     fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
   },
   btnDisabled: { background: "#64748b", cursor: "not-allowed" },
 

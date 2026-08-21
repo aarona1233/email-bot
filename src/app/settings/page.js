@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
+import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState(null);
@@ -95,7 +96,7 @@ export default function SettingsPage() {
 
   if (loading || !settings) {
     return (
-      <div style={{ display: "flex", minHeight: "100vh" }}>
+      <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
         <Sidebar active="settings" />
         <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
           <p style={styles.muted}>Loading…</p>
@@ -107,7 +108,7 @@ export default function SettingsPage() {
   const isPaused = settings.paused_until && new Date(settings.paused_until) > new Date();
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
       <Sidebar active="settings" />
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
         <div style={styles.container}>
@@ -298,14 +299,13 @@ function Toggle({ checked, onChange }) {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#0b0d0f",
     padding: "32px 24px",
     fontFamily: "'Segoe UI', sans-serif",
   },
   container: { maxWidth: "700px", margin: "0 auto" },
 
-  title:    { fontSize: "26px", fontWeight: "700", color: "#e8eaed", margin: "0 0 4px 0" },
-  subtitle: { fontSize: "14px", color: "#9aa0a6", margin: "0 0 24px 0" },
+  title:    { ...type.pageTitle },
+  subtitle: { ...type.pageSubtitle, marginBottom: "24px" },
 
   pausedBanner: {
     background: "rgba(52,211,153,0.08)",
@@ -318,9 +318,7 @@ const styles = {
   },
 
   card: {
-    background: "#16191c",
-    border: "1px solid #2a2e33",
-    borderRadius: "12px",
+    ...glass.panel,
     padding: "20px 22px",
     marginBottom: "16px",
   },
@@ -332,33 +330,24 @@ const styles = {
 
   numberRow: { display: "flex", alignItems: "center", gap: "10px" },
   numberInput: {
+    ...glass.input,
     width: "90px",
     padding: "9px 12px",
-    borderRadius: "8px",
-    border: "1px solid #2a2e33",
-    background: "#0b0d0f",
-    color: "#e8eaed",
     fontSize: "14px",
   },
   numberUnit: { fontSize: "13px", color: "#9aa0a6" },
   aiSignatureTextarea: {
+    ...glass.input,
     width: "100%",
     padding: "12px 14px",
-    borderRadius: "8px",
-    border: "1px solid #2a2e33",
-    background: "#0b0d0f",
-    color: "#e8eaed",
     fontSize: "13px",
     fontFamily: "monospace",
     boxSizing: "border-box",
     resize: "vertical",
   },
   dateInput: {
+    ...glass.input,
     padding: "9px 12px",
-    borderRadius: "8px",
-    border: "1px solid #2a2e33",
-    background: "#0b0d0f",
-    color: "#e8eaed",
     fontSize: "13px",
   },
   clearBtn: {
@@ -394,26 +383,16 @@ const styles = {
 
   actions: { display: "flex", gap: "10px", marginTop: "8px" },
   saveBtn: {
+    ...glass.buttonPrimary,
     flex: 1,
     padding: "13px",
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a",
-    border: "1px solid #8f9aa3",
-    borderRadius: "8px",
     fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
   },
   scanBtn: {
+    ...glass.buttonSecondary,
     flex: 1,
     padding: "13px",
-    background: "transparent",
-    color: "#34d399",
-    border: "1px solid #34d399",
-    borderRadius: "8px",
     fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
   },
 
   lastScan: { fontSize: "11.5px", color: "#6b7278", marginTop: "10px" },

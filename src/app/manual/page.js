@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 
 export default function OfficePage() {
   const router = useRouter();
@@ -66,7 +67,7 @@ export default function OfficePage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
       <Sidebar active="manual" />
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
       <div style={styles.card}>
@@ -140,7 +141,6 @@ export default function OfficePage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#0b0d0f",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -232,10 +232,7 @@ const styles = {
   button: {
     width: "100%",
     padding: "14px",
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a",
-    border: "1px solid #8f9aa3",
-    borderRadius: "8px",
+    ...glass.buttonPrimary,
     fontSize: "15px",
     fontWeight: "700",
     cursor: "pointer",

@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
+import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 
 export default function AdminUsersPage() {
   const [users,    setUsers]    = useState([]);
@@ -42,6 +43,7 @@ export default function AdminUsersPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { ensureMotionStyles(); }, []);
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -127,7 +129,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", ...pageBackground }}>
       <Sidebar active="admin" />
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
         <div style={styles.container}>
@@ -210,8 +212,8 @@ export default function AdminUsersPage() {
 
         {/* ── Manage user modal ─────────────────────────────── */}
         {selected && (
-          <div style={styles.overlay} onClick={() => setSelected(null)}>
-            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div className="materialize-backdrop" style={styles.overlay} onClick={() => setSelected(null)}>
+            <div className="materialize-in chromatic-edge" style={styles.modal} onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setSelected(null)} style={styles.closeBtn}>✕</button>
 
               <div style={styles.modalHeader}>
@@ -282,23 +284,22 @@ export default function AdminUsersPage() {
 }
 
 const styles = {
-  page: { minHeight: "100vh", background: "#0b0d0f", padding: "32px 24px", fontFamily: "'Segoe UI', sans-serif" },
+  page: { minHeight: "100vh", padding: "32px 24px", fontFamily: "'Segoe UI', sans-serif" },
   container: { maxWidth: "640px", margin: "0 auto" },
   title:    { fontSize: "26px", fontWeight: "700", color: "#e8eaed", margin: "0 0 4px 0" },
   subtitle: { fontSize: "13px", color: "#9aa0a6", margin: "0 0 24px 0" },
 
-  card: { background: "#16191c", border: "1px solid #2a2e33", borderRadius: "12px", padding: "22px", marginBottom: "16px" },
+  card: { ...glass.panel, padding: "22px", marginBottom: "16px" },
   cardTitle: { fontSize: "15px", fontWeight: "700", color: "#e8eaed", margin: "0 0 6px 0" },
 
   formRow: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" },
-  input: { padding: "10px 14px", borderRadius: "8px", border: "1px solid #2a2e33", background: "#0b0d0f", color: "#e8eaed", fontSize: "13px", boxSizing: "border-box", width: "100%", marginBottom: "10px" },
-  select: { padding: "10px 14px", borderRadius: "8px", border: "1px solid #2a2e33", background: "#0b0d0f", color: "#e8eaed", fontSize: "13px", width: "100%", marginBottom: "10px" },
-  textarea: { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #2a2e33", background: "#0b0d0f", color: "#e8eaed", fontSize: "12.5px", fontFamily: "monospace", boxSizing: "border-box", resize: "vertical", marginBottom: "10px" },
+  input: { padding: "10px 14px", borderRadius: "8px", ...glass.input, fontSize: "13px", boxSizing: "border-box", width: "100%", marginBottom: "10px" },
+  select: { padding: "10px 14px", borderRadius: "8px", ...glass.input, fontSize: "13px", width: "100%", marginBottom: "10px" },
+  textarea: { width: "100%", padding: "10px 14px", borderRadius: "8px", ...glass.input, fontSize: "12.5px", fontFamily: "monospace", boxSizing: "border-box", resize: "vertical", marginBottom: "10px" },
 
   createBtn: {
     marginTop: "6px", padding: "11px 20px",
-    background: "linear-gradient(180deg, #e4e7eb 0%, #b8c0c9 100%)",
-    color: "#14251a", border: "1px solid #8f9aa3", borderRadius: "8px",
+    ...glass.buttonPrimary,
     fontSize: "13px", fontWeight: "700", cursor: "pointer",
   },
 
