@@ -129,7 +129,7 @@ CRITICAL: Respond with ONLY a single JSON object. No markdown fences, no explana
   try {
     raw = await callProvider(provider, strictSystemPrompt, userMessage, opts);
   } catch (err) {
-    console.error(`[ai-providers] ${provider} call failed:`, err.message);
+    console.error(`[ai-providers] ${provider} call failed:`, err.message, err.cause ? `| cause: ${err.cause}` : "");
     return null;
   }
 
