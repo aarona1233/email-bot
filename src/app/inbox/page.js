@@ -64,6 +64,7 @@ export default function InboxPage() {
   const [selected, setSelected] = useState(null);   // the open email
   const [loading,  setLoading]  = useState(true);
   const [busy,     setBusy]     = useState(false);
+  const [profile,  setProfile]  = useState(null);
   const [error,    setError]    = useState("");
   const [classifying, setClassifying] = useState(false);
 
@@ -134,6 +135,20 @@ export default function InboxPage() {
 
   useEffect(() => { loadEmails(); }, [loadEmails]);
   useEffect(() => { ensureMotionStyles(); }, []);
+
+  // Admin-only debug panel needs to know the current user's role
+  useEffect(() => {
+    fetch("/api/profile/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setProfile(data.profile))
+      .catch(() => {});
+  }, []);
+
+  // Classify pending mail automatically the moment the page loads,
+  // instead of requiring a manual click every time — handleClassifyPending
+  // already only touches rows with category IS NULL, so this is cheap
+  // to re-run on every visit; there's simply nothing to do once caught up.
+  useEffect(() => { handleClassifyPending(); }, []);
 
   async function handleClassifyPending() {
     setClassifying(true);
@@ -238,26 +253,28 @@ export default function InboxPage() {
       <main style={{ ...styles.page, flex: 1, minWidth: 0 }}>
       <div style={styles.container}>
 
-        <button
-          onClick={() => setShowDebug((v) => !v)}
-          style={{
-            background: "transparent",
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "#8b9198",
-            fontSize: "11px",
-            padding: "4px 10px",
-            borderRadius: "6px",
-            cursor: "pointer",
-            marginBottom: "10px",
-          }}
-        >
-          {showDebug ? "Hide" : "Show"} debug panel
-        </button>
+        {profile?.role === "admin" && (
+          <>
+            <button
+              onClick={() => setShowDebug((v) => !v)}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.12)",
+                color: "#8b9198",
+                fontSize: "11px",
+                padding: "4px 10px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                marginBottom: "10px",
+              }}
+            >
+              {showDebug ? "Hide" : "Show"} debug panel
+            </button>
 
-        {showDebug && (
-          <div style={{
-            background: "#16191c",
-            border: "1px solid rgba(255,255,255,0.08)",
+            {showDebug && (
+              <div style={{
+                background: "#16191c",
+                border: "1px solid rgba(255,255,255,0.08)",
             borderRadius: "10px",
             padding: "14px 16px",
             marginBottom: "20px",
@@ -292,6 +309,8 @@ export default function InboxPage() {
               Retry fetch
             </button>
           </div>
+        )}
+          </>
         )}
 
         {/* One unified glass surface for title + stats + tabs —
@@ -404,7 +423,7 @@ export default function InboxPage() {
 
                 <p style={styles.cardSubject}>{email.subject}</p>
                 <p style={styles.cardPreview}>
-                  {(email.body || "").slice(0, 140)}
+                  {(email.body || "").slice(0, 280)}
                   {(email.body || "").length > 140 ? "…" : ""}
                 </p>
 

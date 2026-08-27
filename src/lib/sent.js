@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────
 
 import { supabase } from "@/lib/supabase-office";
+import { getSettings } from "@/lib/followup";
 
 /**
  * Writes one row to sent_emails. Call this AFTER Resend
@@ -60,15 +61,63 @@ export async function recordSentEmail({
 }
 
 /** Returns every sent email, newest first. */
-export async function listSentEmails() {
-  const { data, error } = await supabase
-    .from("sent_emails")
-    .select("*")
-    .order("sent_at", { ascending: false });
+// Works out, per sent email, what to actually show for its follow-up
+// status — a real countdown, or the honest reason there isn't one
+// (already followed up, follow-ups turned off, or currently paused).
+// Kept as a pure function so the date math is easy to reason about
+// and test in isolation from the database calls around it.
+function computeFollowupStatus(sentEmail, settings, latestFollowUpBySentId) {
+  const existing = latestFollowUpBySentId.get(sentEmail.id);
+  if (existing) {
+    if (existing.status === "sent")           return { label: "Follow-up sent", tone: "done" };
+    if (existing.status === "pending_review") return { label: "Follow-up drafted — needs review", tone: "action" };
+    if (existing.status === "skipped")        return { label: "Follow-up skipped", tone: "muted" };
+    return { label: "Follow-up in progress", tone: "muted" };
+  }
 
-  if (error) {
-    console.error("listSentEmails:", error.message);
+  if (!settings) return { label: "Follow-up status unknown", tone: "muted" };
+  if (!settings.enabled) return { label: "Follow-ups disabled", tone: "muted" };
+
+  if (settings.paused_until && new Date(settings.paused_until) > new Date()) {
+    const pausedDate = new Date(settings.paused_until).toLocaleDateString();
+    return { label: `Paused until ${pausedDate}`, tone: "muted" };
+  }
+
+  const sentAt   = new Date(sentEmail.sent_at);
+  const waitDays = settings.wait_days ?? 5;
+  const dueAt    = new Date(sentAt.getTime() + waitDays * 24 * 60 * 60 * 1000);
+  const msLeft   = dueAt.getTime() - Date.now();
+  const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+
+  if (daysLeft > 0) {
+    return { label: `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`, tone: "pending" };
+  }
+  return { label: "Due now", tone: "due" };
+}
+
+export async function listSentEmails() {
+  const [emailsResult, settings, followUpsResult] = await Promise.all([
+    supabase.from("sent_emails").select("*").order("sent_at", { ascending: false }),
+    getSettings(),
+    supabase.from("follow_ups").select("sent_email_id, status").order("created_at", { ascending: false }),
+  ]);
+
+  if (emailsResult.error) {
+    console.error("listSentEmails:", emailsResult.error.message);
     return [];
   }
-  return data;
+
+  // Most recent follow-up per sent email wins, since results are
+  // already ordered newest-first — first one seen per id is kept.
+  const latestFollowUpBySentId = new Map();
+  for (const f of followUpsResult.data || []) {
+    if (!latestFollowUpBySentId.has(f.sent_email_id)) {
+      latestFollowUpBySentId.set(f.sent_email_id, f);
+    }
+  }
+
+  return (emailsResult.data || []).map((email) => ({
+    ...email,
+    followup_status: computeFollowupStatus(email, settings, latestFollowUpBySentId),
+  }));
 }

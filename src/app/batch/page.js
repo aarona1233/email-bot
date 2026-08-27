@@ -344,7 +344,7 @@ export default function BatchPage() {
                   </div>
                   <span style={styles.rowSubject}>{email.subject}</span>
                   <span style={styles.rowPreview}>
-                    {(email.body || "").slice(0, 280)}…
+                    {(email.body || "").slice(0, 400)}…
                   </span>
                   <div style={styles.rowBtnGroup}>
                     <button

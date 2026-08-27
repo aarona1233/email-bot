@@ -12,6 +12,22 @@ import { useState, useEffect, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
 import { colors, glass, pageBackground, type, ensureMotionStyles } from "@/lib/theme";
 
+// Maps a follow-up status "tone" to a badge color — kept as a
+// lookup rather than inline logic so it's easy to scan at a glance.
+function followupBadgeStyle(tone) {
+  const base = {
+    fontSize: "10.5px", fontWeight: "600", padding: "3px 9px",
+    borderRadius: "999px", whiteSpace: "nowrap",
+  };
+  switch (tone) {
+    case "due":    return { ...base, background: "#fef3c7", color: "#92400e" }; // due now — worth noticing
+    case "action": return { ...base, background: "#dbeafe", color: "#1d4ed8" }; // needs a human click
+    case "done":   return { ...base, background: "#dcfce7", color: "#16a34a" }; // already handled
+    case "pending":return { ...base, background: "#f1f5f9", color: "#64748b" }; // counting down, nothing to do yet
+    default:       return { ...base, background: "#f1f5f9", color: "#94a3b8" }; // disabled / paused / unknown
+  }
+}
+
 export default function SentPage() {
   const [emails,   setEmails]   = useState([]);
   const [selected, setSelected] = useState(null);
@@ -162,9 +178,16 @@ export default function SentPage() {
                     {email.sent_body?.slice(0, 260)}
                     {email.sent_body?.length > 260 ? "…" : ""}
                   </p>
-                  <span style={styles.cardDate}>
-                    {new Date(email.sent_at).toLocaleString()}
-                  </span>
+                  <div style={styles.cardFooter}>
+                    <span style={styles.cardDate}>
+                      {new Date(email.sent_at).toLocaleString()}
+                    </span>
+                    {email.followup_status && (
+                      <span style={followupBadgeStyle(email.followup_status.tone)}>
+                        {email.followup_status.label}
+                      </span>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
@@ -352,6 +375,7 @@ const styles = {
   cardSubject: { fontSize: "12.5px", fontWeight: "600", color: "#334155" },
   cardPreview: { fontSize: "12px", color: "#64748b", margin: "2px 0", lineHeight: "1.5" },
   cardDate: { fontSize: "10.5px", color: "#94a3b8", marginTop: "2px" },
+  cardFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2px" },
 
   overlay: {
     position: "fixed",
