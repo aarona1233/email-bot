@@ -28,6 +28,13 @@ Thanks,
 Nadia`,
   },
   {
+    from: "Jake Perelta <jake.perelta@example.com>",
+    subject: "Private office for 7",
+    body: `Hi, looking for a private office for a team of 3, somewhere in Brooklyn. Could you send pricing and availability?
+Thanks,
+Jake`,
+  },
+  {
     from: "Owen Baptiste <owen.baptiste@example.com>",
     subject: "Tour this week?",
     body: `Hello, would love to tour a space this week if possible. Team of 5, ideally Flatiron area.

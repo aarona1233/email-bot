@@ -119,6 +119,13 @@ export async function classifyEmail({ from, subject, body }) {
   const fewShotExamples = await getFewShotExamples();
   const { systemPrompt, userMessage } = buildPrompt({ from, subject, body }, heuristicResult, fewShotExamples);
 
+  console.log("\n========== PROMPT SENT TO OLLAMA ==========");
+  console.log("--- SYSTEM ---");
+  console.log(systemPrompt);
+  console.log("--- USER MESSAGE ---");
+  console.log(userMessage);
+  console.log("=============================================\n");
+
   const result = await callProviderJSON(provider, systemPrompt, userMessage, { model, maxTokens: 200 });
 
   if (!result || !VALID_CATEGORIES.includes(result.category)) {
