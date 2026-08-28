@@ -84,15 +84,18 @@ function computeFollowupStatus(sentEmail, settings, latestFollowUpBySentId) {
   }
 
   const sentAt   = new Date(sentEmail.sent_at);
-  const waitDays = settings.wait_days ?? 5;
+  const waitDays = sentEmail.followup_wait_days_override ?? settings.wait_days ?? 5;
   const dueAt    = new Date(sentAt.getTime() + waitDays * 24 * 60 * 60 * 1000);
   const msLeft   = dueAt.getTime() - Date.now();
   const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
 
+  const isCustom = sentEmail.followup_wait_days_override != null;
+  const customTag = isCustom ? " (custom timer)" : "";
+
   if (daysLeft > 0) {
-    return { label: `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`, tone: "pending" };
+    return { label: `${daysLeft} day${daysLeft === 1 ? "" : "s"} left${customTag}`, tone: "pending" };
   }
-  return { label: "Due now", tone: "due" };
+  return { label: `Due now${customTag}`, tone: "due" };
 }
 
 export async function listSentEmails() {

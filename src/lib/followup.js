@@ -147,18 +147,27 @@ export async function runFollowUpScan({ force = false } = {}) {
   summary.ran = true;
   console.log("[FollowUp] Running scan…");
 
-  // ── Find sent emails older than the wait period ────────
-  const cutoff = new Date(Date.now() - settings.wait_days * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data: candidates, error: candErr } = await supabase
+  // ── Find sent emails that are actually due ──────────────
+  // A single global cutoff date can't work anymore now that
+  // individual emails can have their own wait period — so this
+  // pulls every sent email and checks each one's OWN effective
+  // wait time (its override if set, otherwise the global default)
+  // in code instead of filtering with one shared date in SQL.
+  const { data: allSent, error: candErr } = await supabase
     .from("sent_emails")
     .select("*")
-    .lte("sent_at", cutoff)
     .order("sent_at", { ascending: true });
 
   if (candErr) throw new Error(`Scan query failed: ${candErr.message}`);
 
-  console.log(`[FollowUp] ${candidates.length} sent email(s) older than ${settings.wait_days} day(s)`);
+  const now = Date.now();
+  const candidates = (allSent || []).filter((sent) => {
+    const effectiveWaitDays = sent.followup_wait_days_override ?? settings.wait_days;
+    const dueAt = new Date(sent.sent_at).getTime() + effectiveWaitDays * 24 * 60 * 60 * 1000;
+    return dueAt <= now;
+  });
+
+  console.log(`[FollowUp] ${candidates.length} sent email(s) due (global default: ${settings.wait_days}d, some may have their own override)`);
 
   for (const sent of candidates) {
     try {

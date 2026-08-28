@@ -39,6 +39,9 @@ export default function SentPage() {
   const [followUpBusy,   setFollowUpBusy]   = useState(false);
   const [followUpResult, setFollowUpResult] = useState(null); // { status, id, subject, body }
   const [followUpError,  setFollowUpError]  = useState("");
+  const [timerInput,      setTimerInput]      = useState("");
+  const [savingTimer,     setSavingTimer]     = useState(false);
+  const [timerNotice,     setTimerNotice]     = useState("");
   const [followUpDraft,  setFollowUpDraft]  = useState("");
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
 
@@ -70,6 +73,34 @@ export default function SentPage() {
       e.sent_body?.toLowerCase().includes(q)
     );
   });
+
+  async function handleSaveTimer(clear = false) {
+    setSavingTimer(true);
+    setTimerNotice("");
+    try {
+      const waitDaysOverride = clear ? null : Number(timerInput);
+      if (!clear && (!Number.isFinite(waitDaysOverride) || waitDaysOverride < 0)) {
+        throw new Error("Enter a whole number of days, 0 or more.");
+      }
+
+      const res  = await fetch(`/api/sent/${selected.id}/followup-timer`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ waitDaysOverride }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save timer");
+
+      setSelected(data.email);
+      setTimerInput(data.email.followup_wait_days_override != null ? String(data.email.followup_wait_days_override) : "");
+      setTimerNotice(clear ? "Reset to the global default." : "Custom timer saved.");
+      await loadSent();
+    } catch (err) {
+      setTimerNotice(`Error: ${err.message}`);
+    } finally {
+      setSavingTimer(false);
+    }
+  }
 
   async function handleFollowUpNow(sentEmail) {
     setFollowUpBusy(true);
@@ -163,6 +194,8 @@ export default function SentPage() {
                     setFollowUpResult(null);
                     setFollowUpError("");
                     setFollowUpDraft("");
+                    setTimerInput(email.followup_wait_days_override != null ? String(email.followup_wait_days_override) : "");
+                    setTimerNotice("");
                   }}
                   style={styles.card}
                 >
@@ -229,6 +262,50 @@ export default function SentPage() {
                 {followUpError && (
                   <p style={styles.followUpError}>{followUpError}</p>
                 )}
+
+                {/* Per-email follow-up timer — overrides the global
+                    default in Settings for this one email only */}
+                <div style={styles.timerBox}>
+                  <p style={styles.modalLabel}>Follow-up timer for this email</p>
+                  <p style={styles.timerHint}>
+                    {selected.followup_wait_days_override != null
+                      ? `Currently overridden to ${selected.followup_wait_days_override} day(s). Leave blank and Reset to go back to the global default.`
+                      : "Currently using the global default from Settings. Set a number below to override it just for this email."}
+                  </p>
+                  <div style={styles.timerRow}>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="e.g. 2"
+                      value={timerInput}
+                      onChange={(e) => setTimerInput(e.target.value)}
+                      style={styles.timerInput}
+                    />
+                    <span style={styles.timerUnit}>days</span>
+                    <button
+                      onClick={() => handleSaveTimer(false)}
+                      disabled={savingTimer || timerInput === ""}
+                      style={styles.timerSaveBtn}
+                    >
+                      {savingTimer ? "Saving…" : "Save"}
+                    </button>
+                    {selected.followup_wait_days_override != null && (
+                      <button
+                        onClick={() => handleSaveTimer(true)}
+                        disabled={savingTimer}
+                        style={styles.timerResetBtn}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  {timerNotice && (
+                    <p style={timerNotice.startsWith("Error") ? styles.followUpError : styles.timerNoticeOk}>
+                      {timerNotice}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {followUpResult && (
@@ -435,6 +512,26 @@ const styles = {
     fontSize: "12px",
     color: "#dc2626",
   },
+  timerBox: {
+    marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #e2e8f0",
+  },
+  timerHint: { fontSize: "11.5px", color: "#64748b", margin: "0 0 10px 0", lineHeight: "1.5" },
+  timerRow: { display: "flex", alignItems: "center", gap: "8px" },
+  timerInput: {
+    width: "70px", padding: "8px 10px", borderRadius: "8px",
+    border: "1px solid #cbd5e1", fontSize: "13px", boxSizing: "border-box",
+  },
+  timerUnit: { fontSize: "12.5px", color: "#64748b" },
+  timerSaveBtn: {
+    padding: "8px 14px", background: "#16a34a", color: "#fff", border: "none",
+    borderRadius: "8px", fontSize: "12.5px", fontWeight: "700", cursor: "pointer",
+  },
+  timerResetBtn: {
+    padding: "8px 14px", background: "transparent", color: "#64748b",
+    border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "12.5px",
+    fontWeight: "600", cursor: "pointer",
+  },
+  timerNoticeOk: { marginTop: "8px", fontSize: "12px", color: "#16a34a" },
   followUpBox: {
     background: "#f0fdf4",
     border: "1px solid #bbf7d0",
