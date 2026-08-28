@@ -253,7 +253,11 @@ KEY RULES — follow these exactly:
 10. End with a warm, brief sign-off on its own line — e.g. "Best," or "Thank you," — and NOTHING after it. Do NOT invent a name, title, phone number, or contact block. That gets added automatically after you're done.
 11. IMAGE RULE — this is critical: scan the space data above for any lines that start with "Image:" and contain a real URL (not the word "none"). If you find real Image URLs, copy them EXACTLY as written and add one line per image right after the sign-off: [ATTACH IMAGE: <exact_url>]. If ALL Image lines say "Image: none" or no Image lines exist, do NOT include any [ATTACH IMAGE] lines whatsoever. Do NOT invent URLs. Do NOT guess URLs. Do NOT construct URLs from property names or addresses. Only real URLs copied verbatim from the data.
 12. Never make up availability, pricing, or space details — only use what is in the database
-13. Always give a recommendation even if the match is imperfect — explain what does and doesn't match`;
+13. Give a specific recommendation whenever there is ANY real space data to work with, even an imperfect match — explain what does and doesn't fit. The one exception is rule 2: if the client gave you nothing to go on at all (no team size, no location, no budget), there is nothing to recommend yet — asking one brief, friendly clarifying question is the correct move, not inventing a space to sound helpful. Never invent, guess, or hallucinate a space that isn't in the real data provided to you.`;
+
+  const closingInstruction = bestMatches.length === 0
+    ? `Write a reply email now. There is not enough information in this inquiry to recommend a specific space — do not invent one. Instead, warmly thank them for reaching out and ask 1-2 brief questions to understand what they need (e.g. team size, preferred neighborhood or borough, and rough timeline). Keep it short and friendly, like Example 1.`
+    : `Write a reply email now. Always include at least one recommendation even if it is not a perfect match.`;
 
   const userMessage = `A client sent this inquiry:
 
@@ -266,7 +270,7 @@ BEST MATCHING SPACES from our database:
 ${bestContext}
 ${altContext}
 
-Write a reply email now. Always include at least one recommendation even if it is not a perfect match.`;
+${closingInstruction}`;
 
   return { systemPrompt, userMessage };
 }
