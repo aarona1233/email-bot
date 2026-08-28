@@ -181,7 +181,10 @@ export async function reviewEmail(id, isValid, rejectReason = null, reviewedBy =
 
   if (updateError) throw new Error(`reviewEmail update: ${updateError.message}`);
 
-  // 2. Write the training example
+  // 2. Write the training example — including any correction note
+  // the human wrote explaining WHY the classifier's reasoning was
+  // off, not just that it was. Carried from the inbox row so it
+  // survives even if inbox_emails ever gets reset during testing.
   const { error: feedbackError } = await supabase
     .from("screening_feedback")
     .insert({
@@ -193,6 +196,7 @@ export async function reviewEmail(id, isValid, rejectReason = null, reviewedBy =
       reject_reason:     isValid ? null : rejectReason,
       heuristic_label:   email.heuristic_prediction,
       heuristic_signals: email.heuristic_signals,
+      classifier_correction_note: email.classifier_correction_note || null,
     });
 
   if (feedbackError) {
@@ -205,6 +209,25 @@ export async function reviewEmail(id, isValid, rejectReason = null, reviewedBy =
 }
 
 /** Called after a draft is actually sent, so it leaves the queue. */
+/**
+ * Saves a human's free-text explanation of what the classifier
+ * got wrong (or right) about ITS REASONING, not just the verdict.
+ * Deliberately separate from reviewEmail() — write and refine the
+ * note first, then approve/reject when you're happy with it,
+ * rather than being forced to type it in the same instant you click.
+ */
+export async function saveCorrectionNote(id, note) {
+  const { data, error } = await supabase
+    .from("inbox_emails")
+    .update({ classifier_correction_note: note || null })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(`saveCorrectionNote: ${error.message}`);
+  return data;
+}
+
 export async function markReplied(id) {
   const { error } = await supabase
     .from("inbox_emails")

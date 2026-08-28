@@ -65,6 +65,9 @@ export default function InboxPage() {
   const [loading,  setLoading]  = useState(true);
   const [busy,     setBusy]     = useState(false);
   const [profile,  setProfile]  = useState(null);
+  const [correctionNote, setCorrectionNote] = useState("");
+  const [savingNote,     setSavingNote]     = useState(false);
+  const [noteNotice,     setNoteNotice]     = useState("");
   const [error,    setError]    = useState("");
   const [classifying, setClassifying] = useState(false);
 
@@ -149,6 +152,27 @@ export default function InboxPage() {
   // already only touches rows with category IS NULL, so this is cheap
   // to re-run on every visit; there's simply nothing to do once caught up.
   useEffect(() => { handleClassifyPending(); }, []);
+
+  async function handleSaveCorrectionNote() {
+    setSavingNote(true);
+    setNoteNotice("");
+    try {
+      const res  = await fetch(`/api/inbox/${selected.id}/correction-note`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: correctionNote }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save note");
+      setSelected(data.email);
+      setNoteNotice("Saved — this will inform future classifications.");
+      await loadEmails();
+    } catch (err) {
+      setNoteNotice(`Error: ${err.message}`);
+    } finally {
+      setSavingNote(false);
+    }
+  }
 
   async function handleClassifyPending() {
     setClassifying(true);
@@ -394,7 +418,12 @@ export default function InboxPage() {
             {emails.map((email) => (
               <button
                 key={email.id}
-                onClick={() => { setSelected(email); setRejecting(false); }}
+                onClick={() => {
+                  setSelected(email);
+                  setRejecting(false);
+                  setCorrectionNote(email.classifier_correction_note || "");
+                  setNoteNotice("");
+                }}
                 style={styles.card}
               >
                 <div style={styles.cardTop}>
@@ -490,6 +519,31 @@ export default function InboxPage() {
                     "{selected.category_reasoning}"
                   </p>
                 )}
+
+                {/* Point out flaws in the classifier's actual reasoning —
+                    not just the verdict. This gets shown to the LLM
+                    verbatim on future classifications as an explicit
+                    correction, not reduced to a bare category label. */}
+                <p style={{ ...styles.modalLabel, marginTop: "14px" }}>
+                  What did it get wrong about its reasoning? (optional)
+                </p>
+                <textarea
+                  value={correctionNote}
+                  onChange={(e) => setCorrectionNote(e.target.value)}
+                  placeholder={`e.g. "Even a two-word message asking for space is a real inquiry — don't default to uncertain just because it's short."`}
+                  rows={3}
+                  style={styles.correctionTextarea}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
+                  <button
+                    onClick={handleSaveCorrectionNote}
+                    disabled={savingNote}
+                    style={styles.saveNoteBtn}
+                  >
+                    {savingNote ? "Saving…" : "Save note"}
+                  </button>
+                  {noteNotice && <span style={{ fontSize: "11.5px", color: "#16a34a" }}>{noteNotice}</span>}
+                </div>
               </>
             )}
 
@@ -717,6 +771,15 @@ const styles = {
     textTransform: "uppercase",
     letterSpacing: "0.5px",
     margin: "16px 0 4px 0",
+  },
+  correctionTextarea: {
+    width: "100%", padding: "10px 12px", borderRadius: "8px",
+    border: "1px solid #cbd5e1", fontSize: "12.5px", fontFamily: "inherit",
+    boxSizing: "border-box", resize: "vertical", color: "#1a1a2e",
+  },
+  saveNoteBtn: {
+    padding: "8px 14px", background: "#16a34a", color: "#fff", border: "none",
+    borderRadius: "8px", fontSize: "12px", fontWeight: "700", cursor: "pointer",
   },
   modalValue: { fontSize: "14px", color: "#1a1a2e", margin: 0 },
   modalBody: {

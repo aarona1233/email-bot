@@ -49,7 +49,7 @@ function rejectReasonToCategory(reason) {
 async function getFewShotExamples() {
   const { data, error } = await supabase
     .from("screening_feedback")
-    .select("email_subject, email_body, human_label, reject_reason")
+    .select("email_subject, email_body, human_label, reject_reason, classifier_correction_note")
     .order("created_at", { ascending: false })
     .limit(60); // pull a generous pool, then pick a small varied sample below
 
@@ -66,6 +66,7 @@ async function getFewShotExamples() {
         subject: row.email_subject,
         snippet: (row.email_body || "").slice(0, 200),
         category,
+        note: row.classifier_correction_note || null,
       });
     }
   }
@@ -76,9 +77,17 @@ async function getFewShotExamples() {
 function buildPrompt(email, heuristicResult, fewShotExamples) {
   const examplesText = fewShotExamples.length === 0
     ? "(No past examples yet — use your best judgment based on the definitions above.)"
-    : fewShotExamples.map((ex, i) =>
-        `Example ${i + 1} — subject: "${ex.subject}"\nBody snippet: "${ex.snippet}"\nCorrect category: ${ex.category}`
-      ).join("\n\n");
+    : fewShotExamples.map((ex, i) => {
+        const base = `Example ${i + 1} — subject: "${ex.subject}"\nBody snippet: "${ex.snippet}"\nCorrect category: ${ex.category}`;
+        // A correction note means a human specifically flagged that a
+        // past classification's REASONING was flawed, not just its
+        // label — surface that explanation directly rather than
+        // reducing it to a bare category, so the model can actually
+        // learn what went wrong, not just memorize a different answer.
+        return ex.note
+          ? `${base}\nWhy this matters: ${ex.note}`
+          : base;
+      }).join("\n\n");
 
   const systemPrompt = `You classify incoming business emails for Coalition Space, a coworking and private office company. Sort each email into exactly one category:
 
