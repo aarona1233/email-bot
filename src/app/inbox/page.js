@@ -431,22 +431,23 @@ export default function InboxPage() {
                     {email.from_name || email.from_address}
                   </strong>
                   <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                    {/* What the local LLM classifier decided — the newer, smarter signal */}
-                    {email.category && (
+                    {/* Classifier category is the one signal shown on cards —
+                        it's strictly more capable than the keyword scanner
+                        (it understands direction: vendor pitch vs customer,
+                        not just present/absent keywords). The scanner's raw
+                        guess still exists and still matters, but for
+                        comparison purposes, not as a second card-level
+                        verdict — see the modal, and the accuracy scoreboard
+                        at the top of this page. */}
+                    {email.category ? (
                       <span style={{ ...styles.guessBadge, ...categoryBadgeStyle(email.category) }}>
                         {categoryLabel(email.category)}
                       </span>
+                    ) : (
+                      <span style={{ ...styles.guessBadge, background: "#f1f5f9", color: "#64748b" }}>
+                        not yet classified
+                      </span>
                     )}
-                    {/* What the keyword scanner guessed, before any human looked */}
-                    <span
-                      style={{
-                        ...styles.guessBadge,
-                        background: email.heuristic_prediction ? "#dcfce7" : "#fee2e2",
-                        color:      email.heuristic_prediction ? "#16a34a" : "#dc2626",
-                      }}
-                    >
-                      {email.heuristic_prediction ? "likely valid" : "likely spam"}
-                    </span>
                   </div>
                 </div>
 
@@ -519,6 +520,25 @@ export default function InboxPage() {
                     "{selected.category_reasoning}"
                   </p>
                 )}
+
+                {/* Keyword scanner's guess — shown here as a comparison
+                    point, not a second verdict. It's dumb pattern-matching,
+                    computed before any AI or human ever looked at this
+                    email, kept around specifically to judge whether it's
+                    still worth having (see the accuracy scoreboard at the
+                    top of the page) — not as competing advice. */}
+                <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "11px", color: "#94a3b8" }}>Keyword scanner alone would have guessed:</span>
+                  <span
+                    style={{
+                      fontSize: "10.5px", fontWeight: "600", padding: "2px 8px", borderRadius: "999px",
+                      background: selected.heuristic_prediction ? "#f0fdf4" : "#fef2f2",
+                      color:      selected.heuristic_prediction ? "#16a34a" : "#dc2626",
+                    }}
+                  >
+                    {selected.heuristic_prediction ? "likely valid" : "likely spam"}
+                  </span>
+                </div>
 
                 {/* Point out flaws in the classifier's actual reasoning —
                     not just the verdict. This gets shown to the LLM
