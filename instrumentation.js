@@ -27,10 +27,10 @@ async function runFetch(label) {
 
     if (protocol === "jmap") {
       const { fetchInboxOverJmap } = await import("./src/lib/jmap-fetch.js");
-      summary = await fetchInboxOverJmap({ limit: 25, markSeen: true });
+      summary = await fetchInboxOverJmap({ limit: 25, markReviewed: true });
     } else {
       const { fetchInboxOverImap } = await import("./src/lib/imap-fetch.js");
-      summary = await fetchInboxOverImap({ limit: 25, markSeen: true });
+      summary = await fetchInboxOverImap({ limit: 25, markReviewed: true });
     }
 
     console.log(`[${label}] (${protocol}) Fetch complete:`, summary);

@@ -11,7 +11,7 @@ import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { ingestEmail } from "@/lib/inbox";
 
-export async function fetchInboxOverImap({ limit = 25, markSeen = true } = {}) {
+export async function fetchInboxOverImap({ limit = 25, markReviewed = true } = {}) {
   const host = process.env.IMAP_HOST;
   const port = Number(process.env.IMAP_PORT || 993);
   const user = process.env.IMAP_USER;
@@ -73,18 +73,25 @@ export async function fetchInboxOverImap({ limit = 25, markSeen = true } = {}) {
     )) {
       iterated++;
       const flags = message.flags ? [...message.flags] : [];
-      const isSeen = flags.includes("\\Seen");
+      // Filtering on OUR OWN keyword now, not \Seen — \Seen is the
+      // literal "have I personally read this" flag a human relies on
+      // in their own mail client. Piggybacking on it meant every
+      // email the bot touched looked "already read" to a coworker
+      // sharing this inbox, even if they'd never opened it. This
+      // custom keyword is invisible to that read/unread tracking
+      // entirely — a human's own \Seen state stays exactly theirs.
+      const alreadyReviewed = flags.includes("AIReviewed");
 
-      console.log(`[IMAP] Message seq=${message.seq} uid=${message.uid} seen=${isSeen} hasSource=${!!message.source}`);
+      console.log(`[IMAP] Message seq=${message.seq} uid=${message.uid} aiReviewed=${alreadyReviewed} hasSource=${!!message.source}`);
 
-      if (!isSeen && toProcess.length < limit) {
+      if (!alreadyReviewed && toProcess.length < limit) {
         toProcess.push({ seq: message.seq, uid: message.uid, source: message.source });
       }
     }
     console.log(`[IMAP] Fetch drained. ${iterated} total, ${toProcess.length} queued to process.`);
 
     // ── Pass 2: parse + ingest, fetch loop is fully closed now ──
-    const seqsToMarkSeen = [];
+    const seqsToMarkReviewed = [];
 
     for (const { seq, uid, source } of toProcess) {
       try {
@@ -113,19 +120,21 @@ export async function fetchInboxOverImap({ limit = 25, markSeen = true } = {}) {
           console.log(`[IMAP]   → duplicate, skipped`);
         }
 
-        seqsToMarkSeen.push(seq);
+        seqsToMarkReviewed.push(seq);
       } catch (msgErr) {
         console.error(`[IMAP] Message ${uid} failed:`, msgErr.message);
         summary.errors++;
       }
     }
 
-    // ── Pass 3: mark everything seen in ONE batch call ──────
+    // ── Pass 3: mark everything reviewed in ONE batch call ──
     // Only now that the fetch stream is completely closed.
-    if (markSeen && seqsToMarkSeen.length > 0) {
-      const seqRange = seqsToMarkSeen.join(",");
-      console.log(`[IMAP] Marking seen: ${seqRange}`);
-      await client.messageFlagsAdd(seqRange, ["\\Seen"]);
+    // A CUSTOM keyword, not \Seen — see the note above for why
+    // that distinction is the entire point of this change.
+    if (markReviewed && seqsToMarkReviewed.length > 0) {
+      const seqRange = seqsToMarkReviewed.join(",");
+      console.log(`[IMAP] Marking AIReviewed: ${seqRange}`);
+      await client.messageFlagsAdd(seqRange, ["AIReviewed"]);
     }
   } finally {
     lock.release();

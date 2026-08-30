@@ -73,10 +73,20 @@ async function jmapCall(apiUrl, authHeader, methodCalls) {
  * Pulls unread emails from the inbox mailbox and ingests each one.
  *
  * @param {object} opts
- * @param {number} opts.limit      max emails to pull this run (default 25)
- * @param {boolean} opts.markSeen  mark fetched emails as read (default true)
+ * @param {number} opts.limit          max emails to pull this run (default 25)
+ * @param {boolean} opts.markReviewed  tag fetched emails with our own
+ *                                     "AIReviewed" keyword (default true).
+ *                                     Deliberately NOT $seen — $seen is
+ *                                     the literal "has this been read"
+ *                                     flag a human relies on in their own
+ *                                     mail client. A custom keyword keeps
+ *                                     that completely untouched, so a
+ *                                     coworker sharing this inbox still
+ *                                     sees genuinely accurate read/unread
+ *                                     status, with the bot's own status
+ *                                     visible as a separate label.
  */
-export async function fetchInboxOverJmap({ limit = 25, markSeen = true } = {}) {
+export async function fetchInboxOverJmap({ limit = 25, markReviewed = true } = {}) {
   const host     = process.env.JMAP_HOST;
   const username = process.env.JMAP_USERNAME;
   const password = process.env.JMAP_PASSWORD;
@@ -121,13 +131,15 @@ export async function fetchInboxOverJmap({ limit = 25, markSeen = true } = {}) {
   if (!inboxId) throw new Error("Could not find an Inbox mailbox on this account.");
   console.log(`[JMAP] Inbox mailbox id: ${inboxId}`);
 
-  // ── Step 3: query unread emails in the inbox ───────────
+  // ── Step 3: query emails that WE haven't reviewed yet ──
+  // Filtering on our own keyword, not $seen — same reasoning as
+  // the doc comment above: $seen belongs to the human, not us.
   const [queryResult] = await jmapCall(apiUrl, authHeader, [
     [
       "Email/query",
       {
         accountId,
-        filter: { inMailbox: inboxId, hasKeyword: undefined, notKeyword: "$seen" },
+        filter: { inMailbox: inboxId, notKeyword: "AIReviewed" },
         sort: [{ property: "receivedAt", isAscending: false }],
         limit,
       },
@@ -136,7 +148,7 @@ export async function fetchInboxOverJmap({ limit = 25, markSeen = true } = {}) {
   ]);
 
   const emailIds = queryResult[1].ids || [];
-  console.log(`[JMAP] Found ${emailIds.length} unseen email(s)`);
+  console.log(`[JMAP] Found ${emailIds.length} not-yet-reviewed email(s)`);
 
   if (emailIds.length === 0) {
     return summary;
@@ -206,12 +218,13 @@ export async function fetchInboxOverJmap({ limit = 25, markSeen = true } = {}) {
     }
   }
 
-  // ── Step 6: mark them all as seen in one batch call ────
-  if (markSeen && emails.length > 0) {
-    console.log(`[JMAP] Marking ${emails.length} email(s) as seen`);
+  // ── Step 6: mark them all reviewed in one batch call ────
+  // A custom keyword, not $seen — the whole point of this change.
+  if (markReviewed && emails.length > 0) {
+    console.log(`[JMAP] Marking ${emails.length} email(s) as AIReviewed`);
     const updates = {};
     for (const email of emails) {
-      updates[email.id] = { "keywords/$seen": true };
+      updates[email.id] = { "keywords/AIReviewed": true };
     }
     await jmapCall(apiUrl, authHeader, [
       ["Email/set", { accountId, update: updates }, "c4"],

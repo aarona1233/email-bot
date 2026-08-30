@@ -34,10 +34,10 @@ export async function POST(request) {
     let summary;
     if (protocol === "jmap") {
       const { fetchInboxOverJmap } = await import("@/lib/jmap-fetch");
-      summary = await fetchInboxOverJmap({ limit, markSeen: true });
+      summary = await fetchInboxOverJmap({ limit, markReviewed: true });
     } else if (protocol === "imap") {
       const { fetchInboxOverImap } = await import("@/lib/imap-fetch");
-      summary = await fetchInboxOverImap({ limit, markSeen: true });
+      summary = await fetchInboxOverImap({ limit, markReviewed: true });
     } else {
       throw new Error(`Unknown INBOX_PROTOCOL: "${protocol}". Use imap or jmap.`);
     }
