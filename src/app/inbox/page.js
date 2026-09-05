@@ -505,6 +505,19 @@ export default function InboxPage() {
             <p style={styles.modalLabel}>Body</p>
             <div style={styles.modalBody}>{selected.body}</div>
 
+            {/* Why a human rejected this — shown prominently and early,
+                not buried at the bottom past everything else. This is
+                exactly the reference info that also feeds the classifier's
+                future training via screening_feedback.reject_reason. */}
+            {selected.status === "rejected" && (
+              <div style={styles.rejectionReasonBox}>
+                <p style={styles.rejectionReasonLabel}>Rejected — reason on file</p>
+                <p style={styles.rejectionReasonValue}>
+                  {selected.reject_reason || "No reason was recorded for this rejection."}
+                </p>
+              </div>
+            )}
+
             {/* What the local LLM classifier decided, and why */}
             {selected.category && (
               <>
@@ -814,6 +827,15 @@ const styles = {
     maxHeight: "240px",
     overflowY: "auto",
   },
+  rejectionReasonBox: {
+    marginTop: "14px", padding: "12px 14px", borderRadius: "8px",
+    background: "#fef2f2", border: "1px solid #fecaca",
+  },
+  rejectionReasonLabel: {
+    fontSize: "11px", fontWeight: "700", color: "#dc2626",
+    textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 4px 0",
+  },
+  rejectionReasonValue: { fontSize: "13.5px", color: "#7f1d1d", margin: 0, lineHeight: "1.5" },
   signalRow: { display: "flex", flexWrap: "wrap", gap: "5px" },
   signalBadge: {
     fontSize: "11px",
